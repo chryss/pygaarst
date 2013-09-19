@@ -1,7 +1,7 @@
 pygaarst
 ========
 
-Python geospatial analysis and remote sensing tools 
+Tools for geospatial analysis and remote sensing with Python
 
 pygaarst is a library for Python to load and process remote sensing data
 in commonly used formats. This includes combining data from different sources,
@@ -16,4 +16,5 @@ There will be multiple dependencies, such as:
 * pyproj
 * numpy, matplotlib and mpl_toolkits.basemap
 * shapely, fiona, descartes
+* netCDF4, h5py -- for netCDF, HDF5
 * etc.
