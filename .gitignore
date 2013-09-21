@@ -26,6 +26,9 @@ pip-log.txt
 .tox
 nosetests.xml
 
+# test data (large files)
+tests/data/*
+
 # Translations
 *.mo
 
@@ -36,3 +39,7 @@ nosetests.xml
 
 # TextMate
 *.tmproj
+
+# iPython
+.ipynb_checkpoints
+*.ipynb
