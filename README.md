@@ -18,3 +18,46 @@ There will be multiple dependencies, such as:
 * shapely, fiona, descartes
 * netCDF4, h5py -- for netCDF, HDF5
 * etc.
+
+pygaarst.modapsclient
+---------------------
+
+Class ModapsClient
+
+Usage:
+from pygaarst import modapsclient as m
+a = m.ModapsClient()
+
+a.[methodname]
+
+Implements the following methods from http://ladsweb.nascom.nasa.gov/data/api.html (those with x are implemented):
+
+
+x getAllOrders  
+x getBands  
+x getBrowse  
+x getCollections  
+x getDataLayers  
+x getDateCoverage  
+x getFileOnlineStatuses  
+x getFileProperties  
+x getFileUrls  
+x getMaxSearchResults  
+getOpenSearch  
+getOrderStatus  
+getOrderUrl  
+getOSDD  
+getPostProcessingTypes  
+x listCollections (deprecated)  
+x listMapProjections  
+x listProductGroups  
+x listProducts  
+x listProductsByInstrument  
+x listReprojectionParameters  
+x listSatelliteInstruments  
+orderFiles  
+orderFilesProcessed (deprecated)  
+releaseOrder  
+searchDatasets  
+x searchForFiles  
+searchForFilesByName  
