@@ -198,7 +198,7 @@ def _postprocess(valuestr):
     return valuestr
 
 def parsemeta(metadataloc):
-    """metadataloc should be either a filename or a directory; returns dictionary"""
+    """metadataloc: a filename or a directory. Returns metadata dictionary"""
 
     # filename or directory? if several fit, use first one and warn
     if os.path.isdir(metadataloc):
@@ -212,16 +212,16 @@ def parsemeta(metadataloc):
     elif os.path.isfile(metadataloc):
         metadatafn = metadataloc
         logging.info("Using file %s." % metadatafn)
+    else:
+        raise LandsatMTLParseError("File location %s is unavailable or doesn't contain a suitable metadata file." % metadataloc)
     
     # Reading file line by line and inserting data into metadata dictionary 
     status = 0
     metadata = {}
     grouppath = []
     dictpath = [metadata]
-    logging.info("starting")
     with open(metadatafn, 'rU') as fn:
         for line in fn:
-            #logging.info("current line: %s" % line.strip())
             if status == 4:
                 # we reached the end in the previous iteration, but are still reading lines
                 logging.warning("Found end before finishing file parsing.")
@@ -237,7 +237,6 @@ def lskeyselect(isnew, keystr):
     """
     new2old = {
         'DATE_ACQUIRED': 'ACQUISITION_DATE'
-    
     }
     if not isnew:
         try:

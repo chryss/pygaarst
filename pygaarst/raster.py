@@ -40,7 +40,6 @@ class GeoTIFF(object):
     """
     def __init__(self, filepath):
         try:
-            logging.info("Opening %s" % filepath)
             self.dataobj = gdal.Open(filepath)
         except RuntimeError as e: 
             logging.error("Could not open %s: %s" % (filepath, e))
@@ -191,11 +190,6 @@ class Landsatscene(object):
     """
 
     def __init__(self, dirname):
-        try:
-            logging.info("Loading Landsat scene %s" % dirname)
-        except RuntimeError as e: 
-            logging.error("Could not open %s: %s" % (dirname, e))
-            raise
         self.dirname = dirname
         self.infix = ''
         metadata = lu.parsemeta(dirname)
@@ -224,7 +218,6 @@ class Landsatscene(object):
         """
         isband = False
         head, sep, tail = bandname.lower().partition('band')
-        print head, sep, tail
         try:
             band = tail.upper()
             if head == '':
