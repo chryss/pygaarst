@@ -1,0 +1,12 @@
+GDAL
+numpy
+h5py
+pyhdf
+netCDF4
+pyproj
+shapely
+fiona
+# recommended:
+# matplotlib
+# scipy
+# mpl_toolkits.basemap
