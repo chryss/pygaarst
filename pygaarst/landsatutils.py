@@ -9,6 +9,23 @@ Implemented:
   - Landsat
 """
 
+# ================================
+# = Landsat parameters for bands =
+# ================================
+
+LANDSATBANDS = {
+    'L4': ['1', '2', '3', '4', '5', '6', '7'],
+    'L5': ['1', '2', '3', '4', '5', '6', '7'],
+    'L7': ['1', '2', '3', '4', '5', '6L', '6H', '7'],
+    'L8': ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11']
+}
+
+def get_bands(spacecraftid):
+    try:
+        return LANDSATBANDS[spacecraftid]
+    except KeyError:
+        logging.error("Band labels are available for TM, ETM+ and OLI/TIR sensors on %s." % ', '.join(LANDSATBANDS.keys()))
+
 # ==================================================================
 # = Landsat metadata parsing                                       =
 # 
@@ -32,6 +49,8 @@ Implemented:
 import os.path, glob
 import datetime
 import re
+import math
+import numpy as np
 import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger('pygaarst.raster')
@@ -209,7 +228,27 @@ def parsemeta(metadataloc):
             status = _checkstatus(status, line)
             grouppath, dictpath = _transstat(status, grouppath, dictpath, line)
     return metadata
+
+def lskeyselect(isnew, keystr):
+    """
+    Translates key strings from old to new metadata format, dependent on self.newmetaformat 
+    (Boolean). See http://landsat.usgs.gov/Landsat_Metadata_Changes.php for changes in August 2012.\
+        Only implemented for keys that are used in this module.
+    """
+    new2old = {
+        'DATE_ACQUIRED': 'ACQUISITION_DATE'
     
+    }
+    if not isnew:
+        try:
+            return new2old[keystr]
+        except KeyError:
+            logging.warning("Key %s might not be valid for old-style metadata files." % keystr)
+    else:
+        return keystr
+
+
+
 # =====================================================================
 # = Landat Thermal Bands Radiance to Brightness Temperature Conversion =
 # 
@@ -231,4 +270,31 @@ K1_L5_TM = 607.76
 K2_L5_TM = 1260.56
 K1_L7_EMTplus = 666.09
 K2_L7_EMTplus = 1282.71
+KtoC = 273.15
 
+def getKconstants(spacecraftid):
+    if spacecraftid == 'L4':
+        return K1_L4_TM, K2_L4_TM
+    elif spacecraftid == 'L5':
+        return K1_L5_TM, K2_L5_TM
+    elif spacecraftid == 'L7':
+        return K1_L7_EMTplus, K2_L7_EMTplus
+    else:
+        logging.warning('SpacecraftID not in L4, L5, L7. Check metadata or spacecraftID. Or both.')
+        
+
+def gainbias(lmax, lmin, qcalmax, qcalmin):
+    gain = (lmax - lmin)/(qcalmax - qcalmin)
+    bias = (qcalmax*lmin - qcalmin*lmax)/(qcalmax - qcalmin)
+    return gain, bias
+
+def dn2rad(data, gain, bias):
+    return data * gain + bias
+
+def rad2kelvin(data, k1, k2):
+    return np.divide(k2, np.log(np.divide(k1, data) + 1))
+    
+def rad2celsius(data, k1, k2):
+    return rad2kelvin(data, k1, k2) - KtoC
+
+    
