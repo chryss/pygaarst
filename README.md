@@ -42,7 +42,7 @@ from pygaarst import modapsclient as m
 a = m.ModapsClient()
 retvar = a.[methodname](args)
 ```
-`
+
 Implements the methods from http://ladsweb.nascom.nasa.gov/data/api.html , except for (currently) those related to OpenSearch (which don't appear to be working reliably server-side) and ordering (TBD). Implemented methods are marked with an x. 
 
 * x `getAllOrders`  
@@ -136,9 +136,13 @@ Parses a metadata file and returns a dictionary of metadata values in the same n
 structure as the USGS metadata file decription language.
 
 **`pygaarst.landsatutils.getKconstants(spacecraftid)`**
+
 **`pygaarst.landsatutils.gainbias(lmax, lmin, qcalmax, qcalmin)`**
+
 **`pygaarst.landsatutils.dn2rad(data, gain, bias)`**
+
 **`pygaarst.landsatutils.rad2kelvin(data, k1, k2)`**
+
 **`pygaarst.landsatutils.rad2celsius(data, k1, k2)`**
 
 These utility functions facilitate the conversion of digintal numbers (DN) to radiance
