@@ -9,6 +9,16 @@ Implemented:
   - Landsat
 """
 
+from __future__ import division
+
+import os.path, glob
+import datetime
+import re
+import numpy as np
+import logging
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger('pygaarst.raster')
+
 # ================================
 # = Landsat parameters for bands =
 # ================================
@@ -28,7 +38,7 @@ def get_bands(spacecraftid):
 
 # ==================================================================
 # = Landsat metadata parsing                                       =
-# 
+#
 # The metadata file looks like this:
 # GROUP = L1_METADATA_FILE
 #   GROUP = METADATA_FILE_INFO
@@ -46,15 +56,6 @@ def get_bands(spacecraftid):
 #  END
 # ==================================================================
 
-import os.path, glob
-import datetime
-import re
-import math
-import numpy as np
-import logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger('pygaarst.raster')
-
 # Landsat metadata files end in _MTL.txt or _MTL.TXT
 METAPATTERN = "*_MTL*"
 
@@ -65,7 +66,13 @@ ASSIGNCHAR = " = "
 FINAL = "END"
 
 # A simple state machine is used to parse the file. There are 5 states (0 to 4):
-STATUSCODE = ["begin", "enter metadata group", "add metadata item", "leave metadata group", "end"]
+STATUSCODE = [
+    "begin",
+    "enter metadata group",
+    "add metadata item",
+    "leave metadata group",
+    "end"
+    ]
 
 # A custom exception for this module
 class LandsatMTLParseError(Exception):
@@ -121,7 +128,7 @@ def _checkstatus(status, line):
         elif _islinetype(line, GRPEND):
             newstatus = 3
         elif _isfinal(line):
-            newstatus = 4        
+            newstatus = 4
     if newstatus != 0:
         return newstatus
     elif status != 4:
@@ -156,7 +163,7 @@ def _transstat(status, grouppath, dictpath, line):
             raise LandsatMTLParseError("Reached end before end of group '%s'" % grouppath[-1])
     return grouppath, dictpath
 
-# Identifying data type of a metadata item and 
+# Identifying data type of a metadata item and
 def _postprocess(valuestr):
     """Takes value as string, returns string, integer, float, date, datetime, or time"""
     intpattern = re.compile(r'^\-?\d+$')
@@ -183,16 +190,16 @@ def _postprocess(valuestr):
         return datetime.datetime.strptime(valuestr, datedttimepattern)
     except ValueError:
         pass
-    # time parsing is complicated: Python's datetime module only accepts 
+    # time parsing is complicated: Python's datetime module only accepts
     # fractions of a second only up to 6 digits
-    m = re.match(timepattern, valuestr)
-    if m:
-        test = m.group(0)
+    mat = re.match(timepattern, valuestr)
+    if mat:
+        test = mat.group(0)
         try:
             return datetime.datetime.strptime(test, timedtpattern).time()
         except ValueError:
             pass
-    
+
     # If we get here, we still haven't returned anything.
     logging.info("The value %s couldn't be parsed as int, float, date, time, datetime. Returning it as string." % valuestr)
     return valuestr
@@ -214,8 +221,8 @@ def parsemeta(metadataloc):
         logging.info("Using file %s." % metadatafn)
     else:
         raise LandsatMTLParseError("File location %s is unavailable or doesn't contain a suitable metadata file." % metadataloc)
-    
-    # Reading file line by line and inserting data into metadata dictionary 
+
+    # Reading file line by line and inserting data into metadata dictionary
     status = 0
     metadata = {}
     grouppath = []
@@ -231,7 +238,7 @@ def parsemeta(metadataloc):
 
 def lskeyselect(isnew, keystr):
     """
-    Translates key strings from old to new metadata format, dependent on self.newmetaformat 
+    Translates key strings from old to new metadata format, dependent on self.newmetaformat
     (Boolean). See http://landsat.usgs.gov/Landsat_Metadata_Changes.php for changes in August 2012.\
         Only implemented for keys that are used in this module.
     """
@@ -250,10 +257,10 @@ def lskeyselect(isnew, keystr):
 
 # =====================================================================
 # = Landat Thermal Bands Radiance to Brightness Temperature Conversion =
-# 
-# See Chander, G., Markham, B. L., Helder, D.L. (2009): 
-# Summary of current radiometric calibration coefficients for Landsat 
-# MSS, TM, ETM+, and EO-1 ALI sensors, Remote Sensing of Environment, 893-903. 
+#
+# See Chander, G., Markham, B. L., Helder, D.L. (2009):
+# Summary of current radiometric calibration coefficients for Landsat
+# MSS, TM, ETM+, and EO-1 ALI sensors, Remote Sensing of Environment, 893-903.
 # http://dx.doi.org/10.1016/j.rse.2009.01.007
 #
 # K1 in W/(m^s sr μm). K2 in K
@@ -280,7 +287,6 @@ def getKconstants(spacecraftid):
         return K1_L7_EMTplus, K2_L7_EMTplus
     else:
         logging.warning('SpacecraftID not in L4, L5, L7. Check metadata or spacecraftID. Or both.')
-        
 
 def gainbias(lmax, lmin, qcalmax, qcalmin):
     gain = (lmax - lmin)/(qcalmax - qcalmin)
@@ -292,8 +298,30 @@ def dn2rad(data, gain, bias):
 
 def rad2kelvin(data, k1, k2):
     return np.divide(k2, np.log(np.divide(k1, data) + 1))
-    
+
 def rad2celsius(data, k1, k2):
     return rad2kelvin(data, k1, k2) - KtoC
 
-    
+# =========================================
+# = Landsat vegetation indices parameters =
+# =========================================
+
+NDVI_BANDS = {
+    'L4': ('band4', 'band3'),
+    'L5': ('band4', 'band3'),
+    'L7': ('band4', 'band3'),
+    'L8': ('band5', 'band4')
+    }
+
+NBR_BANDS = {
+    'L4': ('band4', 'band7'),
+    'L5': ('band4', 'band7'),
+    'L7': ('band4', 'band7'),
+    'L8': ('band5', 'band7'),
+    }
+
+def normdiff(array1, array2):
+    return np.divide(
+        array1.astype(float) - array2.astype(float), 
+        array1.astype(float) + array2.astype(float)
+        )

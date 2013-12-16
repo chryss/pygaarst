@@ -5,9 +5,11 @@ pygaarst.modapsclient
 
 Created by Chris Waigl on 2013-10-22.
 
-A client to do talk to MODAPS web services. 
+A client to do talk to MODAPS web services.
 See http://ladsweb.nascom.nasa.gov/data/web_services.html
 """
+
+from __future__ import division, print_function
 
 import sys
 import os
@@ -15,18 +17,22 @@ import unittest
 import urllib, urllib2
 from xml.dom import minidom
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger('pygaarst.modapsclient')
+
 def _parsekeyvals(domobj, containerstr, keystr, valstr):
-    """Parses what's basically a keys-values structrue in a list of container 
-    elements of the form 
-    <container><key>A_KEY</key><value>A_VALUE</value></container> 
+    """Parses what's basically a keys-values structrue in a list of container
+    elements of the form
+    <container><key>A_KEY</key><value>A_VALUE</value></container>
     and returns it as a dictionary"""
     output = {}
     nodelist = domobj.getElementsByTagName(containerstr)
-    for node in nodelist: 
+    for node in nodelist:
         key = value = None
         children = node.childNodes
         for child in children:
-            if child.tagName == keystr: 
+            if child.tagName == keystr:
                 key = child.firstChild.data
             elif child.tagName == valstr:
                 value = child.firstChild.data
@@ -35,24 +41,24 @@ def _parsekeyvals(domobj, containerstr, keystr, valstr):
     return output
 
 def _parselist(domobj, containerstr):
-    """Parses what's basically a list of strings contained in a container 
-    elements of the form 
-    <container>A_VALUE</container> 
+    """Parses what's basically a list of strings contained in a container
+    elements of the form
+    <container>A_VALUE</container>
     and returns it as a list"""
     output = []
     nodelist = domobj.getElementsByTagName(containerstr)
-    for node in nodelist: 
+    for node in nodelist:
         output.append(node.firstChild.data)
     return output
 
 def _parselistofdicts(domobj, containerstr, prefix, listofkeys):
-    """Parses what's basically a list of dictionaries contained in a container 
-    elements of the form 
-    <container><prefix:key1>VAL1</prefix:key1><prefix:key2>...</prefix:key2>...</container> 
+    """Parses what's basically a list of dictionaries contained in a container
+    elements of the form
+    <container><prefix:key1>VAL1</prefix:key1><prefix:key2>...</prefix:key2>...</container>
     and returns it as a list of dictionaries"""
     output = []
     nodelist = domobj.getElementsByTagName(containerstr)
-    for node in nodelist: 
+    for node in nodelist:
         item = {}
         children = node.childNodes
         for child in children:
@@ -64,12 +70,12 @@ def _parselistofdicts(domobj, containerstr, prefix, listofkeys):
 
 class ModapsClient(object):
     """
-    Implements a client for MODAPS web service retrieval of satellite data, 
+    Implements a client for MODAPS web service retrieval of satellite data,
     without post-processing
-    
+
     See http://ladsweb.nascom.nasa.gov/data/quickstart.html
     """
-    
+
     def __init__(self):
         self.baseurl = u"http://modwebsrv.modaps.eosdis.nasa.gov/axis2/services/MODAPSservices"
         self.headers = {
@@ -86,13 +92,13 @@ class ModapsClient(object):
         try:
             response = urllib2.urlopen(request).read()
         except urllib2.HTTPError as e:
-            print "Error opening URL: %s" % e
-            print "URL is %s" % url
-            if data: print "Query string is %s" % querydata 
+            logging.critical("Error opening URL: %s" % e)
+            logging.critical("URL is %s" % url)
+            if data: logging.critical("Query string is %s" % querydata)
             sys.exit(1)
         xmldoc = minidom.parseString(response)
-        return parserfun(xmldoc, **argdict)        
-    
+        return parserfun(xmldoc, **argdict)
+
     def getAllOrders(self, email):
         pass
 
@@ -105,7 +111,7 @@ class ModapsClient(object):
         argdict[u'valstr'] = u'mws:value'
         data = {}
         data[u'product'] = product
-        return self._parsedresponse(path, argdict, parser, data=data)    
+        return self._parsedresponse(path, argdict, parser, data=data)
 
     def getBrowse(self, fileId):
         """fileIds is a single file-ID"""
@@ -120,7 +126,7 @@ class ModapsClient(object):
         data = {}
         data[u'fileId'] = fileId
         return self._parsedresponse(path, argdict, parser, data=data)
-    
+
     def getCollections(self, product):
         path = u'/getCollections'
         parser = _parsekeyvals
@@ -203,10 +209,10 @@ class ModapsClient(object):
 
     def getOrderStatus(self,  OrderID ):
         pass
-    
+
     def getOrderUrl(self,  OrderID ):
         pass
-        
+
     def getPostProcessingTypes(self, products):
         '''products: comma-concatenated string of valid product labels'''
         path = u'/getPostProcessingTypes'
@@ -216,25 +222,24 @@ class ModapsClient(object):
         data = {}
         data[u'products'] = products
         return self._parsedresponse(path, argdict, parser, data=data)
-        
-        
+
     def listCollections(self):
         """Deprecated. Use getCollections (not implemented yet)"""
         path = u'/listCollections'
         parser = _parsekeyvals
         argdict = {}
         argdict[u'containerstr'] = u'ns:return'
-        argdict[u'keystr'] = u'ax21:id'
-        argdict[u'valstr'] = u'ax21:value'
+        argdict[u'keystr'] = u'ax27:id'
+        argdict[u'valstr'] = u'ax27:value'
         return self._parsedresponse(path, argdict, parser)
-        
+
     def listMapProjections(self):
         path = u'/listMapProjections'
         parser = _parsekeyvals
         argdict = {}
         argdict[u'containerstr'] = u'ns:return'
-        argdict[u'keystr'] = u'ax21:name'
-        argdict[u'valstr'] = u'ax21:value'
+        argdict[u'keystr'] = u'ax27:name'
+        argdict[u'valstr'] = u'ax27:value'
         return self._parsedresponse(path, argdict, parser)
 
     def listProductGroups(self, instrument):
@@ -246,7 +251,7 @@ class ModapsClient(object):
         argdict[u'valstr'] = u'mws:value'
         data = {}
         data[u'instrument'] = instrument
-        return self._parsedresponse(path, argdict, parser, data=data)    
+        return self._parsedresponse(path, argdict, parser, data=data)
 
     def listProducts(self):
         path = u'/listProducts'
@@ -256,7 +261,7 @@ class ModapsClient(object):
         argdict[u'keystr'] = u'mws:Name'
         argdict[u'valstr'] = u'mws:Description'
         return self._parsedresponse(path, argdict, parser)
-    
+
     def listProductsByInstrument(self, instrument, group=None):
         path = u'/listProductsByInstrument'
         parser = _parselist
@@ -266,7 +271,7 @@ class ModapsClient(object):
         data[u'instrument'] = instrument
         if group:
             data[u'group'] = group
-        return self._parsedresponse(path, argdict, parser, data=data)    
+        return self._parsedresponse(path, argdict, parser, data=data)
 
     def listReprojectionParameters(self, reprojectionName):
         path = u'/listReprojectionParameters'
@@ -286,13 +291,13 @@ class ModapsClient(object):
         parser = _parsekeyvals
         argdict = {}
         argdict[u'containerstr'] = u'ns:return'
-        argdict[u'keystr'] = u'ax21:name'
-        argdict[u'valstr'] = u'ax21:value'
-        return self._parsedresponse(path, argdict, parser)  
+        argdict[u'keystr'] = u'ax27:name'
+        argdict[u'valstr'] = u'ax27:value'
+        return self._parsedresponse(path, argdict, parser)
 
     def orderFiles(self,  FileIDs ):
         pass
-        
+
     def searchForFiles(self, products, startTime, endTime, north, south, east, west, coordsOrTiles=u'coords', dayNightBoth=u'DNB', collection=5 ):
         path = u'/searchForFiles'
         parser = _parselist
@@ -311,9 +316,19 @@ class ModapsClient(object):
             data[u'collection'] = collection
         if dayNightBoth:
             data[u'dayNightBoth'] = dayNightBoth
-            return self._parsedresponse(path, argdict, parser, data=data)  
+        return self._parsedresponse(path, argdict, parser, data=data)
+
+    def searchForFilesByName(self, collection, pattern):
+        path = u'/searchForFilesByName'
+        parser = _parselist
+        argdict = {}
+        argdict[u'containerstr'] = u'return'
+        data = {}
+        data[u'collection'] = collection
+        data[u'pattern'] = pattern
+        return self._parsedresponse(path, argdict, parser, data=data)
 
 if __name__ == '__main__':
     a = ModapsClient()
     req = a.listCollections()
-    print req
+    print(req)

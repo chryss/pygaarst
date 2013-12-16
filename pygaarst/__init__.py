@@ -1,1 +1,7 @@
-__all__ = ["basemaputils", "raster", "vector", "modapsclient", "landsatutils"]
+__all__ = [
+    "basemaputils",
+    "raster",
+    "vector",
+    "modapsclient",
+    "landsatutils"
+    ]

@@ -18,7 +18,7 @@ from netCDF4 import Dataset as netCDF
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger('pygaarst.vector')
+LOGGER = logging.getLogger('pygaarst.vector')
 
 # GDAL doesn't by default use exceptions
 gdal.UseExceptions()

@@ -11,19 +11,23 @@ Implemented:
 Created by Chris Waigl on 2013-09-18.
 """
 
+from __future__ import division, print_function
 import os, os.path
 import numpy as np
 
-import h5py
+import logging
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger('pygaarst.raster')
+
 from osgeo import gdal, osr
 from pyproj import Proj
 from netCDF4 import Dataset as netCDF
-
-import landsatutils as lu
-
-import logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger('pygaarst.raster')
+try:
+    import h5py
+except ImportError:
+    logging.warning("The h5py library couldn't be imported, so HDF5 files aren't supported")
+    
+import pygaarst.landsatutils as lu
 
 # GDAL doesn't by default use exceptions
 gdal.UseExceptions()
@@ -41,7 +45,7 @@ class GeoTIFF(object):
     def __init__(self, filepath):
         try:
             self.dataobj = gdal.Open(filepath)
-        except RuntimeError as e: 
+        except RuntimeError as e:
             logging.error("Could not open %s: %s" % (filepath, e))
             raise
         self.filepath = filepath
@@ -53,7 +57,7 @@ class GeoTIFF(object):
         self.uly = self._gtr[3]
         self.lrx = self.ulx + self.ncol * self._gtr[1] + self.nrow * self._gtr[2]
         self.lry = self.uly + self.ncol * self._gtr[4] + self.nrow * self._gtr[5]
-    
+
     @property
     def data(self):
         return self.dataobj.ReadAsArray()
@@ -73,16 +77,16 @@ class GeoTIFF(object):
         numbands = self.dataobj.RasterCount
         if numbands == 1:
             fig = plt.figure(figsize=(15, 10))
-            plt.imshow(self.data[:,:], cmap='bone')
+            plt.imshow(self.data[:, :], cmap='bone')
         elif numbands > 1:
             for idx in range(numbands):
                 fig = plt.figure(figsize=(15, 10))
-                plt.imshow(self.data[idx,:,:], cmap='bone')
+                plt.imshow(self.data[idx, :, :], cmap='bone')
 
 class Landsatband(GeoTIFF):
     """
-    Represents a band of a Landsat scene. 
-    
+    Represents a band of a Landsat scene.
+
     Implemented: TM/ETM+ L5/7 and OLI/TIRS L8, both old and new metadata format
     """
     def __init__(self, filepath, band=None, scene=None):
@@ -92,11 +96,11 @@ class Landsatband(GeoTIFF):
         if self.scene:
             self.meta = self.scene.meta
         if not self.meta:
-            try:  
+            try:
                 self.meta = lu.parsemeta(os.path.basename(self.filepath))
-            except AttributeError: 
+            except AttributeError:
                 logging.warning(
-                "Could not find metadata for band object. Set it explicitly: " + 
+                "Could not find metadata for band object. Set it explicitly: " +
                 "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
                 )
         super(Landsatband, self).__init__(filepath)
@@ -110,7 +114,7 @@ class Landsatband(GeoTIFF):
                 return self.meta['PRODUCT_METADATA']['SPACECRAFT_ID']
             except AttributeError:
                 logging.warning(
-                "Spacecraft not set - should be 'L4', 'L5', '7', or 'L8'. Set a metadata file explicitly: " + 
+                "Spacecraft not set - should be 'L4', 'L5', '7', or 'L8'. Set a metadata file explicitly: " +
                 "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
                 )
 
@@ -127,7 +131,7 @@ class Landsatband(GeoTIFF):
                 return False
             except AttributeError:
                 logging.warning(
-                "Could not find metadata for band object. Set it explicitly:" + 
+                "Could not find metadata for band object. Set it explicitly:" +
                 "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
                 )
 
@@ -145,7 +149,7 @@ class Landsatband(GeoTIFF):
             lmax = self.meta['MIN_MAX_RADIANCE']['RADIANCE_MAXIMUM_BAND_%s' % bandstr]
             lmin = self.meta['MIN_MAX_RADIANCE']['RADIANCE_MINIMUM_BAND_%s' % bandstr]
             qcalmax = self.meta['MIN_MAX_PIXEL_VALUE']['QUANTIZE_CAL_MAX_BAND_%s' % bandstr]
-            qcalmin =self.meta['MIN_MAX_PIXEL_VALUE']['QUANTIZE_CAL_MIN_BAND_%s' % bandstr]
+            qcalmin = self.meta['MIN_MAX_PIXEL_VALUE']['QUANTIZE_CAL_MIN_BAND_%s' % bandstr]
             gain, bias = lu.gainbias(lmax, lmin, qcalmax, qcalmin)
             return lu.dn2rad(self.data, gain, bias)
         else:
@@ -156,23 +160,21 @@ class Landsatband(GeoTIFF):
             qcalmin = self.meta['MIN_MAX_PIXEL_VALUE']['QCALMIN_BAND%s' % bandstr]
             gain, bias = lu.gainbias(lmax, lmin, qcalmax, qcalmin)
             return lu.dn2rad(self.data, gain, bias)
-#        else:
-#            logging.warning("Radiance doesn't seem to be implemented. Check metadata and spacecraft ID attributes. Sorry.")
         return None
-        
+
     @property
     def tKelvin(self):
         """L8 band 10 and 11 only. Others TBD."""
         if not self.scene:
             raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
-        if (  (self.spacecraft == 'L8' and self.band not in ['10', '11'] )  or 
+        if (  (self.spacecraft == 'L8' and self.band not in ['10', '11'] )  or
               ( self.spacecraft != 'L8' and not self.band.startswith('6') )):
             logging.warning("Automatic brightness Temp not implemented. Cannot calculate temperature. Sorry.")
             return None
         elif self.spacecraft == 'L8':
             self.k1 =  self.meta['TIRS_THERMAL_CONSTANTS']['K1_CONSTANT_BAND_%s' % self.band]
             self.k2 =  self.meta['TIRS_THERMAL_CONSTANTS']['K2_CONSTANT_BAND_%s' % self.band]
-        elif self.spacecraft in ['L4', 'L5', 'L7']: 
+        elif self.spacecraft in ['L4', 'L5', 'L7']:
             self.k1, self.k2 = lu.getKconstants(self.spacecraft)
         return lu.rad2kelvin(self.radiance, self.k1, self.k2)
 
@@ -182,11 +184,11 @@ def _get_spacecraftid(spid):
     'Landsat_8' -> 'L8', 'Landsat5' -> 'L5' etc
     """
     return spid[0].upper() + spid[-1]
-    
+
 class Landsatscene(object):
     """
-    A container object for TM/ETM+ L5/7 and OLI/TIRS L8 scenes. Input: directory name, 
-    which is expected to contain all scene files.     
+    A container object for TM/ETM+ L5/7 and OLI/TIRS L8 scenes. Input: directory name,
+    which is expected to contain all scene files.
     """
 
     def __init__(self, dirname):
@@ -197,7 +199,7 @@ class Landsatscene(object):
         # first of all, find out software version, metadata format type (new or old)
         # and satellite (L5, L7, L8)
         # Metadata change, see http://landsat.usgs.gov/Landsat_Metadata_Changes.php
-        self.newmetaformat = True 
+        self.newmetaformat = True
         self.spacecraft = _get_spacecraftid(
             self.meta['PRODUCT_METADATA']['SPACECRAFT_ID']
             )
@@ -209,11 +211,11 @@ class Landsatscene(object):
         self.majorswversion = int(versionstr.split('.')[0][5:])
         self.bands = {}
         self.permissiblebands = lu.get_bands(self.spacecraft)
-    
+
     def __getattr__(self, bandname):
         """
         Override _gettattr__() for bandnames of the form bandN with N in l.LANDSATBANDS.
-        Allows for infixing the filename just before the .TIF extension for 
+        Allows for infixing the filename just before the .TIF extension for
         pre-processed bands.
         """
         isband = False
@@ -223,7 +225,7 @@ class Landsatscene(object):
             if head == '':
                 if band in self.permissiblebands:
                     isband = True
-                else: 
+                else:
                     raise PygaarstRasterError(
                         "Spacecraft %s does not have a band %s. Permissible band labels are %s." %
                          (self.spacecraft, band, ', '.join(self.permissiblebands)))
@@ -240,11 +242,31 @@ class Landsatscene(object):
             bandfn = self.meta['PRODUCT_METADATA'][keyname]
             base, ext = os.path.splitext(bandfn)
             postprocessfn = base + self.infix + ext
-            bandpath = os.path.join(self.dirname,postprocessfn)
+            bandpath = os.path.join(self.dirname, postprocessfn)
             self.bands[band] = Landsatband(bandpath, band=band, scene=self)
             return self.bands[band]
         else:
-            return object.__getattribute__(self, bandname)  
+            return object.__getattribute__(self, bandname)
+
+    @property
+    def NDVI(self):
+        label1, label2 = lu.NDVI_BANDS[self.spacecraft]
+        try:
+            arr1 = self.__getattr__(label1).data
+            arr2 = self.__getattr__(label2).data
+            return lu.normdiff(arr1, arr2)
+        except AttributeError:
+            logging.critical("Error accessing bands %s and %s to calculate NDVI." % (label1, label2))
+            raise
+
+    @property
+    def NBR(self):
+        label1, label2 = lu.NBR_BANDS[self.spacecraft]
+        try:
+            return lu.normdiff(self.label1, self.label2)
+        except AttributeError:
+            logging.critical("Error accessing bands %s and %s to calculate NBR." % (label1, label2))
+            raise
 
 class NetCDF(object):
     pass
@@ -252,16 +274,12 @@ class NetCDF(object):
 
 class HDF5(object):
     """
-    A class providing access to a VIIRS HDF5 file or dataset
+    A class providing access to a generic HDF5
     Parameters:
     filepath: full or relative path to the data file
-    geofilepath (optional): override georeference array file from
-      metadata; full or relative path to georeference file
-    variable (optional): name of a variable to access
-    TODO: Move VIIRS-specific functionality to VIIRSBand(HDF5).
     """
     import h5py
-    def __init__(self, filepath, geofilepath=None, variable=None):
+    def __init__(self, filepath):
         try:
             logging.info("Opening %s" % filepath)
             self.dataobj = h5py.File(filepath, "r")
@@ -270,6 +288,36 @@ class HDF5(object):
         except IOError as e:
             logging.error("Could not open %s: %s" % (filepath, e))
             raise
+        if not self.dataobj:
+            raise PygaarstRasterError(
+                "Could not read data from %s as HDF5 file." % filepath
+            )
+
+def _getlabel(groupname):
+    labelelems = groupname.split('-')
+    print(labelelems)
+    if labelelems[-1].startswith(u'GEO'):
+        return u'GEO'
+    else:
+        return labelelems[-2]
+
+   
+class VIIRSHDF5(HDF5):
+    """
+    A class providing access to a VIIRS HDF5 file or dataset
+    Parameters:
+    filepath: full or relative path to the data file
+    geofilepath (optional): override georeference array file from
+      metadata; full or relative path to georeference file
+    variable (optional): name of a variable to access
+    """
+
+
+    def __init__(self, filepath, geofilepath=None, variable=None):
+        super(VIIRSHDF5, self).__init__(filepath)
+        self.bandnames = self.dataobj['All_Data'].keys()
+        self.bandlabels = {_getlabel(nm): nm for nm in self.bandnames}
+        self.bands = {}
         self.bandname = self.dataobj['All_Data'].keys()[0]
         self.datasets = self.dataobj['All_Data/'+self.bandname].items()
         if geofilepath:
@@ -281,20 +329,43 @@ class HDF5(object):
             except KeyError:
                 self.geofilepath = None
         
+    def __getattr__(self, bandname):
+        """
+        Override _gettattr__() for bandnames of the form bandN with N in l.LANDSATBANDS.
+        Allows for infixing the filename just before the .TIF extension for
+        pre-processed bands.
+        """
+        if bandname in self.bandlabels:
+            return self.dataobj['All_Data/' + self.bandlabels[bandname]]
+        else:
+            return object.__getattribute__(self, bandname)        
+
     @property
-    def geodataobj(self):
-        try:
-            geodetics = h5py.File(self.geofilepath, "r")
-        except Exception as e:
-            print e
-        self.geogroupkey = geodetics['All_Data'].keys()[0]
-        return geodetics
+    def geodata(self):
+        """Object representing the georeference data, in its entirety"""
+        if self.geofilepath:
+            geodat = h5py.File(self.geofilepath, "r")
+            if not geodat:
+                raise PygaarstRasterError(
+                    "Unable to open georeference file %s." % self.geofilepath
+                )
+            self.geogroupkey = geodat['All_Data'].keys()[0]
+            return geodat['All_Data/%s' % self.geogroupkey]
+        elif self.GEO:
+            # It could be an aggregated multi-band VIIRS file with embedded georeferences
+            return self.GEO
+        else:
+            raise PygaarstRasterError(
+                "Unable to find georeference information for %s." % self.filepath
+            )
+        return geodat
     
     @property
     def lats(self):
-        return self.geodataobj['All_Data/%s/Latitude' % self.geogroupkey][:]
+        """Latitudes as provided by georeference array"""
+        return self.geodata['Latitude' ][:]
 
     @property
     def lons(self):
-        return self.geodataobj['All_Data/%s/Longitude' % self.geogroupkey][:]
-    
+        """Longitudes as provided by georeference array"""
+        return self.geodata['Longitude' ][:]
