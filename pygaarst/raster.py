@@ -14,6 +14,7 @@ Created by Chris Waigl on 2013-09-18.
 from __future__ import division, print_function
 import os, os.path
 import numpy as np
+import datetime
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -163,6 +164,32 @@ class Landsatband(GeoTIFF):
         return None
 
     @property
+    def reflectance(self):
+        """L5-8 . Others TBD."""
+        if not self.meta:
+            raise PygaarstRasterError("Impossible to retrieve metadata for band. No reflectance calculation possible.")
+        if self.spacecraft == 'L8':
+            self.gain = self.meta['RADIOMETRIC_RESCALING']['REFLECTANCE_MULT_BAND_%s' % self.band]
+            self.bias = self.meta['RADIOMETRIC_RESCALING']['REFLECTANCE_ADD_BAND_%s' % self.band]
+            sedeg = self.meta['IMAGE_ATTRIBUTES']['SUN_ELEVATION']
+            rawrad = lu.dn2rad(self.data, self.gain, self.bias)
+            return rawrad/(np.sin(sedeg*np.pi/180))
+        elif self.spacecraft in ['L5', 'L7']:
+            if self.newmetaformat:
+                sedeg = self.meta['IMAGE_ATTRIBUTES']['SUN_ELEVATION'] 
+                dac = self.meta['PRODUCT_METADATA']['DATE_ACQUIRED']
+            else:
+                sedeg = self.meta['PRODUCT_PARAMETERS']['SUN_ELEVATION'] 
+                dac = self.meta['PRODUCT_METADATA']['ACQUISITION_DATE']
+            juliandac = int(datetime.date.strftime(dac, '%j'))
+            d = lu.getd(juliandac)
+            esun = lu.getesun(self.spacecraft, self.band)
+            rad = self.radiance
+            return (np.pi * d * d * rad)/(esun * np.sin(sedeg*np.pi/180))
+        else:
+            return None
+
+    @property
     def tKelvin(self):
         """L8 band 10 and 11 only. Others TBD."""
         if not self.scene:
@@ -262,11 +289,27 @@ class Landsatscene(object):
     @property
     def NBR(self):
         label1, label2 = lu.NBR_BANDS[self.spacecraft]
+        print(label1, label2)
         try:
-            return lu.normdiff(self.label1, self.label2)
+            arr1 = self.__getattr__(label1).data
+            arr2 = self.__getattr__(label2).data
+            return lu.normdiff(arr1, arr2)
         except AttributeError:
             logging.critical("Error accessing bands %s and %s to calculate NBR." % (label1, label2))
             raise
+    
+    @property
+    def ltkcloud(self):
+        return lu.LTKcloud(self)
+        
+    @property
+    def naivecloud(self):
+        if self.spacecraft == 'L8':
+            return lu.naivethermal(self.band10)
+        elif self.spacecraft == 'L7':
+            return lu.naivethermal(self.band6H)
+        else:
+            return lu.naivethermal(self.band6)
 
 class NetCDF(object):
     pass
