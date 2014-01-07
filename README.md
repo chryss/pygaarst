@@ -72,7 +72,7 @@ Implements the methods from http://ladsweb.nascom.nasa.gov/data/api.html , excep
 * `releaseOrder`  
 * `searchDatasets`  
 * x `searchForFiles`  
-* `searchForFilesByName`  
+* x `searchForFilesByName`  
 
 TODO: ordering
 
