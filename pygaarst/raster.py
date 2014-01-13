@@ -52,6 +52,7 @@ class GeoTIFF(object):
         self.filepath = filepath
         self.ncol = self.dataobj.RasterXSize
         self.nrow = self.dataobj.RasterYSize
+        self.nbands = self.dataobj.RasterCount
         self._gtr = self.dataobj.GetGeoTransform()
         # see http://www.gdal.org/gdal_datamodel.html
         self.ulx = self._gtr[0]
@@ -83,6 +84,64 @@ class GeoTIFF(object):
             for idx in range(numbands):
                 fig = plt.figure(figsize=(15, 10))
                 plt.imshow(self.data[idx, :, :], cmap='bone')
+
+    def clone(self, newpath, newdata):
+        """
+        Returns new GeoTIFF object, changed data, same georeference.
+        
+        Input:
+        newpath: valid file path
+        newdata: numpy array, 2 or 3-dim
+        Returns:
+        raster.GeoTIFF object
+        """
+        # convert Numpy dtype objects to GDAL type codes
+        # see https://gist.github.com/chryss/8366492
+        NPDTYPE2GDALTYPECODE = {
+          "uint8": 1, 
+          "int8": 1, 
+          "uint16": 2, 
+          "int16": 3, 
+          "uint32": 4, 
+          "int32": 5, 
+          "float32": 6
+          "float64": 7, 
+          "complex64": 10, 
+          "complex128": 11, 
+        }
+        # check if newpath is potentially a valid file path to save data
+        dirname, fname = os.path.split(newpath)
+        if dirname:
+            if not os.path.isdir(dirname):
+                raise PygaarstRasterError("%s is not a valid directory to save file to " % dirname)
+        if os.path.isdir(newpath):
+            LOGGER.warning("%s is a directory. Choose a name that is suitable to writing a dataset to.")
+        if newdata.shape != self.data.shape and newdata.shape != self.data[0,...].shape:
+            raise PygaarstRasterError("New and cloned GeoTIFF dataset must be the same shape.")
+        dims = newdata.ndim
+        if dims == 2:
+            bands = 1
+        elif dims > 2:
+            bands = newdata.shape[0]
+        else:
+            raise PygaarstRasterError("New data array has only %s dimensions." % dims)
+        try:
+            gdaltype = NPDTYPE2GDALTYPECODE[newdata.dtype.name]
+        except KeyError as err:
+            raise PygaarstRasterError("Data type in array cannot be converted to GDAL data type: \n%s" % err)
+        proj = self.dataobj.GetProjection()
+        geotrans = self._gtr
+        gtiffdr = gdal.GetDriverByName('GTiff')
+        gtiff = gtiffdr.Create(newpath, self.ncol, self.nrow, bands, gdaltype)
+        gtiff.SetProjection(proj)
+        gtiff.SetGeoTransform(geotrans)
+        if dims == 2:
+            gtiff.GetRasterBand(1).WriteArray(newdata)
+        else:
+            for idx in range(dims):
+                gtiff.GetRasterBand(idx+1).WriteArray(newdata[idx, :, :])
+        gtiff = None
+        return GeoTIFF(newpath)
 
 class Landsatband(GeoTIFF):
     """
@@ -289,7 +348,6 @@ class Landsatscene(object):
     @property
     def NBR(self):
         label1, label2 = lu.NBR_BANDS[self.spacecraft]
-        print(label1, label2)
         try:
             arr1 = self.__getattr__(label1).data
             arr2 = self.__getattr__(label2).data
