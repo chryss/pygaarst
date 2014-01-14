@@ -5,8 +5,10 @@ pygaarst.raster
 Classes and methods to handle raster file formats.
 Implemented:
 - GeoTIFF
-- HDF5 (stub)
 - Landsatband(GeoTIFF)
+- Landsatscene 
+- HDF5 
+- VIIRSHDF5(HDF)
 
 Created by Chris Waigl on 2013-09-18.
 """
@@ -104,7 +106,7 @@ class GeoTIFF(object):
           "int16": 3, 
           "uint32": 4, 
           "int32": 5, 
-          "float32": 6
+          "float32": 6,
           "float64": 7, 
           "complex64": 10, 
           "complex128": 11, 
@@ -432,9 +434,7 @@ class VIIRSHDF5(HDF5):
         
     def __getattr__(self, bandname):
         """
-        Override _gettattr__() for bandnames of the form bandN with N in l.LANDSATBANDS.
-        Allows for infixing the filename just before the .TIF extension for
-        pre-processed bands.
+        Override _gettattr__() for bandnames in self.bandlabels.
         """
         if bandname in self.bandlabels:
             return self.dataobj['All_Data/' + self.bandlabels[bandname]]
@@ -454,7 +454,7 @@ class VIIRSHDF5(HDF5):
             return geodat['All_Data/%s' % self.geogroupkey]
         elif self.GEO:
             # It could be an aggregated multi-band VIIRS file with embedded georeferences
-            return self.GEO
+            return self.GEO 
         else:
             raise PygaarstRasterError(
                 "Unable to find georeference information for %s." % self.filepath
