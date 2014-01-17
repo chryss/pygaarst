@@ -43,3 +43,7 @@ tests/data/*
 # iPython
 .ipynb_checkpoints
 *.ipynb
+
+# documentation build directory
+doc/_build/
+doc/_build/*

@@ -23,12 +23,15 @@ logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.raster')
 
 from osgeo import gdal, osr
-from pyproj import Proj
+try:
+    from pyproj import Proj
+except ImportError:
+    LOGGER.warning("PROJ4 is not available. Any method requiring coordinate transform will fail.")
 from netCDF4 import Dataset as netCDF
 try:
     import h5py
 except ImportError:
-    logging.warning("The h5py library couldn't be imported, so HDF5 files aren't supported")
+    LOGGER.warning("The h5py library couldn't be imported, so HDF5 files aren't supported")
     
 import pygaarst.landsatutils as lu
 
@@ -39,17 +42,29 @@ gdal.UseExceptions()
 class PygaarstRasterError(Exception):
     pass
 
+# helper function
+
+def test_outside(testx, lower, upper):
+    """
+    True if testx, or any element of it is outside [lower, upper).
+    
+    Lower bound included, upper bound excluded. 
+    Input: Integer or floating point scalar or Numpy array. 
+    """
+    test = np.array(testx)
+    return np.any(test < lower) or np.any(test >= upper)
+
 class GeoTIFF(object):
     """
     A class providing access to a GeoTIFF file
     Parameters:
-    filepath: full or relative path to the data file
+    filepath: full or relative path to a valid data file in GeoTIFF format
     """
     def __init__(self, filepath):
         try:
             self.dataobj = gdal.Open(filepath)
         except RuntimeError as e:
-            logging.error("Could not open %s: %s" % (filepath, e))
+            LOGGER.error("Could not open %s: %s" % (filepath, e))
             raise
         self.filepath = filepath
         self.ncol = self.dataobj.RasterXSize
@@ -61,6 +76,8 @@ class GeoTIFF(object):
         self.uly = self._gtr[3]
         self.lrx = self.ulx + self.ncol * self._gtr[1] + self.nrow * self._gtr[2]
         self.lry = self.uly + self.ncol * self._gtr[4] + self.nrow * self._gtr[5]
+        if self._gtr[2] != 0 or self._gtr[4] != 0:
+            LOGGER.warning("The dataset is not north-up. The geotransform is given by: (%s). Northing and easting values will not have expected meaning." % ', '.join([str(item) for item in nsdic._gtr]))
 
     @property
     def data(self):
@@ -75,6 +92,103 @@ class GeoTIFF(object):
         osrref = osr.SpatialReference()
         osrref.ImportFromWkt(self.projection)
         return osrref.ExportToProj4()
+
+    @property
+    def coordtrans(self):
+        return Proj(self.proj4)
+
+    @property
+    def delx(self):
+        return self._gtr[1]
+        
+    @property
+    def dely(self):
+        return self._gtr[5]
+        
+    @property
+    def easting(self): 
+        """Easting means x-coordinates of pixel corners, ncol+1."""
+        return np.arange(self.ulx, self.lrx + self.delx, self.delx)
+
+    @property
+    def northing(self): 
+        """Northing means y-coordinates of pixel corners, nrow+1."""
+        return np.arange(self.lry, self.uly - self.dely, -self.dely)
+
+    @property
+    def x_pxcenter(self): 
+        """x-coordinates of pixel centers, ncol."""
+        return np.arange(self.ulx + self.delx/2, self.lrx + self.delx/2, self.delx)
+
+    @property
+    def y_pxcenter(self): 
+        """y-coordinates of pixel centers, nrow."""
+        return np.arange(self.lry - self.dely/2, self.uly - self.dely/2, -self.dely)
+
+    @property
+    def northing(self): 
+        """Northing means y-coordinates of pixel corners, nrow+1."""
+        return np.arange(self.lry, self.uly - self.dely, -self.dely)
+    
+    @property
+    def _XY(self):
+        return np.meshgrid(self.easting, self.northing)
+
+    @property
+    def _XY_pxcenter(self):
+        return np.meshgrid(self.x_pxcenter, self.y_pxcenter)
+    
+    @property
+    def LonLat_pxcorner(self):
+        return self.coordtrans(*self._XY, inverse=True)
+    
+    @property
+    def LonLat_pxcenter(self):
+        return self.coordtrans(*self._XY_center, inverse=True)
+        
+    @property
+    def Lon(self):
+        return self.LonLat_pxcorner[0]
+
+    @property
+    def Lat(self):
+        return self.LonLat_pxcorner[1]
+
+    def ij2xy(self, i, j):
+        """
+        Convert array coordinate pair(s) to easting/northing coordinate pairs(s).
+        
+        NOTE: array coordinate origin is in the top left corner whereas 
+        easting/northing origin is in the bottom left corner. Easting and northing
+        are floating point numbers, and refer to the top-left corner coordinate of the 
+        pixel. i runs from 0 to nrow-1, j from 0 to ncol-1
+        Input: accepts scalars or numpy arrays, integer valued, >=0.
+        """
+        if test_outside(i, 0, self.nrow) or test_outside(j, 0, self.ncol):
+            raise PygaarstRasterError("Coordinates %d, %d out of bounds" % (i, j))
+        x = self.easting[0] + j * self.delx
+        y = self.northing[-1] + i * self.dely
+        return x, y
+        
+    def xy2ij(self, x, y):
+        """
+        Convert easting/northing coordinate pair(s) to array coordinate pairs(s).
+        
+        NOTE: array coordinate origin is in the top left corner whereas 
+        easting/northing origin is in the bottom left corner. Easting and northing
+        are floating point numbers, and refer to the top-left corner coordinate of the 
+        pixel. i runs from 0 to nrow-1, j from 0 to ncol-1
+        Input: accepts scalars or numpy arrays.
+        """
+        if ( test_outside(x, self.easting[0], self.easting[-1]) or
+             test_outside(y, self.northing[0], self.northing[-1])):
+            raise PygaarstRasterError("Coordinates out of bounds")
+        i = np.floor((1 - (y  - self.northing[0])/(self.northing[-1] - \
+            self.northing[0])) * self.nrow)
+        j = np.floor((x - self.easting[0])/(self.easting[-1] - self.easting[0]) \
+            * self.ncol)
+            return i, j
+        
 
     def simpleplot(self):
         import matplotlib.pyplot as plt
@@ -161,7 +275,7 @@ class Landsatband(GeoTIFF):
             try:
                 self.meta = lu.parsemeta(os.path.basename(self.filepath))
             except AttributeError:
-                logging.warning(
+                LOGGER.warning(
                 "Could not find metadata for band object. Set it explicitly: " +
                 "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
                 )
@@ -175,7 +289,7 @@ class Landsatband(GeoTIFF):
             try:
                 return self.meta['PRODUCT_METADATA']['SPACECRAFT_ID']
             except AttributeError:
-                logging.warning(
+                LOGGER.warning(
                 "Spacecraft not set - should be 'L4', 'L5', '7', or 'L8'. Set a metadata file explicitly: " +
                 "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
                 )
@@ -192,7 +306,7 @@ class Landsatband(GeoTIFF):
                 versionstr = self.meta['PRODUCT_METADATA']['PROCESSING_SOFTWARE']
                 return False
             except AttributeError:
-                logging.warning(
+                LOGGER.warning(
                 "Could not find metadata for band object. Set it explicitly:" +
                 "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
                 )
@@ -257,7 +371,7 @@ class Landsatband(GeoTIFF):
             raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
         if (  (self.spacecraft == 'L8' and self.band not in ['10', '11'] )  or
               ( self.spacecraft != 'L8' and not self.band.startswith('6') )):
-            logging.warning("Automatic brightness Temp not implemented. Cannot calculate temperature. Sorry.")
+            LOGGER.warning("Automatic brightness Temp not implemented. Cannot calculate temperature. Sorry.")
             return None
         elif self.spacecraft == 'L8':
             self.k1 =  self.meta['TIRS_THERMAL_CONSTANTS']['K1_CONSTANT_BAND_%s' % self.band]
@@ -344,7 +458,7 @@ class Landsatscene(object):
             arr2 = self.__getattr__(label2).data
             return lu.normdiff(arr1, arr2)
         except AttributeError:
-            logging.critical("Error accessing bands %s and %s to calculate NDVI." % (label1, label2))
+            LOGGER.critical("Error accessing bands %s and %s to calculate NDVI." % (label1, label2))
             raise
 
     @property
@@ -355,7 +469,7 @@ class Landsatscene(object):
             arr2 = self.__getattr__(label2).data
             return lu.normdiff(arr1, arr2)
         except AttributeError:
-            logging.critical("Error accessing bands %s and %s to calculate NBR." % (label1, label2))
+            LOGGER.critical("Error accessing bands %s and %s to calculate NBR." % (label1, label2))
             raise
     
     @property
@@ -384,12 +498,12 @@ class HDF5(object):
     import h5py
     def __init__(self, filepath):
         try:
-            logging.info("Opening %s" % filepath)
+            LOGGER.info("Opening %s" % filepath)
             self.dataobj = h5py.File(filepath, "r")
             self.filepath = filepath
             self.dirname = os.path.dirname(filepath)
         except IOError as e:
-            logging.error("Could not open %s: %s" % (filepath, e))
+            LOGGER.error("Could not open %s: %s" % (filepath, e))
             raise
         if not self.dataobj:
             raise PygaarstRasterError(

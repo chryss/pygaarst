@@ -1,11 +1,11 @@
 GDAL
 numpy
 h5py
-pyhdf
+#pyhdf
 netCDF4
 pyproj
-shapely
-fiona
+# shapely
+# fiona
 # recommended:
 # matplotlib
 # scipy
