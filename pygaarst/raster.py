@@ -169,7 +169,7 @@ class GeoTIFF(object):
         x = self.easting[0] + j * self.delx
         y = self.northing[-1] + i * self.dely
         return x, y
-        
+
     def xy2ij(self, x, y):
         """
         Convert easting/northing coordinate pair(s) to array coordinate pairs(s).
@@ -187,8 +187,7 @@ class GeoTIFF(object):
             self.northing[0])) * self.nrow)
         j = np.floor((x - self.easting[0])/(self.easting[-1] - self.easting[0]) \
             * self.ncol)
-            return i, j
-        
+        return i, j
 
     def simpleplot(self):
         import matplotlib.pyplot as plt
