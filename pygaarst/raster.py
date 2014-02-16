@@ -472,6 +472,11 @@ class Landsatscene(object):
             raise
     
     @property
+    def TIRband(self):
+        label = lu.getTIRlabel(self.spacecraft)
+        return self.__getattr__(label)
+    
+    @property
     def ltkcloud(self):
         return lu.LTKcloud(self)
         

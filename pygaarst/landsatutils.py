@@ -302,6 +302,22 @@ def rad2kelvin(data, k1, k2):
 def rad2celsius(data, k1, k2):
     return rad2kelvin(data, k1, k2) - KtoC
 
+TIR_BANDS = {
+    'L4': 'band6',
+    'L5': 'band6',
+    'L7': 'band6',
+    'L8': 'band10'
+    }
+
+
+def getTIRlabel(spacecraftid, gain='H', l8pref='10'):
+    bnd = TIR_BANDS[spacecraftid]
+    if spacecraftid == 'L7':
+        bnd += gain.upper()
+    elif spacecraftid == 'L8' and l8pref == '11':
+        bnd = 'band11'
+    return bnd
+
 # =============================
 # = Landsat DN to reflectance =
 # =============================
