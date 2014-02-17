@@ -67,6 +67,10 @@ def _parselistofdicts(domobj, containerstr, prefix, listofkeys):
                 item[key] = child.firstChild.data
         output.append(item)
     return output
+    
+def _startswithax(item):
+    """Helper function to filter tag lists for those starting with the xmlns:ax string"""
+    return item.startswith('xmlns:ax')
 
 class ModapsClient(object):
     """
@@ -82,7 +86,7 @@ class ModapsClient(object):
             u'User-Agent': u'satellite RS data fetcher'
             }
 
-    def _parsedresponse(self, path, argdict, parserfun, data=None):
+    def _parsedresponse(self, path, argdict, parserfun, data=None, unstabletags=False):
         url = self.baseurl + path
         if data:
             querydata = urllib.urlencode(data)
@@ -97,6 +101,19 @@ class ModapsClient(object):
             if data: logging.critical("Query string is %s" % querydata)
             sys.exit(1)
         xmldoc = minidom.parseString(response)
+        if unstabletags:
+            attr = xmldoc.documentElement.attributes.items()
+            pref = filter(_startswithax, [item[0] for item in attr])
+            if not pref:
+                LOGGER.error("No valid namespace prefix found for request %s ." % url)
+                sys.exit(1)
+            elif len(pref) > 1:
+                LOGGER.error("Too many potential namespace prefix found for request %s. Using %s." % (url, pref[0]))
+            else:
+                prefix = pref[0][6:] + ':'
+                for item in argdict:
+                    if item != 'containerstr':
+                        argdict[item] = prefix + argdict[item]
         return parserfun(xmldoc, **argdict)
 
     def getAllOrders(self, email):
@@ -229,18 +246,18 @@ class ModapsClient(object):
         parser = _parsekeyvals
         argdict = {}
         argdict[u'containerstr'] = u'ns:return'
-        argdict[u'keystr'] = u'ax27:id'
-        argdict[u'valstr'] = u'ax27:value'
-        return self._parsedresponse(path, argdict, parser)
+        argdict[u'keystr'] = u'id'
+        argdict[u'valstr'] = u'value'
+        return self._parsedresponse(path, argdict, parser, unstabletags=True)
 
     def listMapProjections(self):
         path = u'/listMapProjections'
         parser = _parsekeyvals
         argdict = {}
         argdict[u'containerstr'] = u'ns:return'
-        argdict[u'keystr'] = u'ax27:name'
-        argdict[u'valstr'] = u'ax27:value'
-        return self._parsedresponse(path, argdict, parser)
+        argdict[u'keystr'] = u'name'
+        argdict[u'valstr'] = u'value'
+        return self._parsedresponse(path, argdict, parser, unstabletags=True)
 
     def listProductGroups(self, instrument):
         path = u'/listProductGroups'
@@ -291,9 +308,9 @@ class ModapsClient(object):
         parser = _parsekeyvals
         argdict = {}
         argdict[u'containerstr'] = u'ns:return'
-        argdict[u'keystr'] = u'ax27:name'
-        argdict[u'valstr'] = u'ax27:value'
-        return self._parsedresponse(path, argdict, parser)
+        argdict[u'keystr'] = u'name'
+        argdict[u'valstr'] = u'value'
+        return self._parsedresponse(path, argdict, parser, unstabletags=True)
 
     def orderFiles(self,  FileIDs ):
         pass
