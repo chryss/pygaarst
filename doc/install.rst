@@ -33,7 +33,7 @@ Future functionality is expected to require the following packages:
 Installation
 ============
 
-The use of a virtualenv_ is recommended
+The use of a virtualenv_ is recommended.
 
 At the current stage, there is no stable release for Pygaarst yet. The latest code from the master branch can be installed via::
 

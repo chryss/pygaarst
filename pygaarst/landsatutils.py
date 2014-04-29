@@ -557,7 +557,6 @@ def naivethermal(tirband, tb=280.):
     out[tirband.tKelvin < tb] = 1.
     return out
     
-    
 def LTKcloud(lsscene):
     """Luo–Trishchenko–Khlopenkov"""
     if lsscene.spacecraft == 'L8':

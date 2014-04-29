@@ -217,7 +217,7 @@ def parsemeta(metadataloc):
         for line in fn:
             if status == 4:
                 # we reached the end in the previous iteration, but are still reading lines
-                logging.warning("Found end before finishing file parsing.")
+                logging.warning("Metadata file %s appears to have extra lines after the end of the metadata. This is probably, but not necessarily, harmless." % metadatafn)
             status = _checkstatus(status, line)
             grouppath, dictpath = _transstat(status, grouppath, dictpath, line)
     return metadata

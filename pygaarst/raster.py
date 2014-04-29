@@ -166,12 +166,12 @@ class GeoTIFF(object):
         return self._LonLat_pxcorner[1]
     
     @property
-    def Lon(self):
+    def Lon_pxcenter(self):
         """Longitude coordinate of each pixel center, as an array"""
         return self._LonLat_pxcenter[0]
     
     @property
-    def Lat(self):
+    def Lat_pxcenter(self):
         """Latitude coordinate of each pixel center, as an array"""
         return self._LonLat_pxcenter[1]
     
@@ -387,6 +387,7 @@ class Landsatscene(USGSL1scene):
 
     @property
     def NDVI(self):
+        """The Normalized Difference Vegetation Index"""
         label1, label2 = lu.NDVI_BANDS[self.spacecraft]
         try:
             arr1 = self.__getattr__(label1).data
@@ -398,6 +399,7 @@ class Landsatscene(USGSL1scene):
 
     @property
     def NBR(self):
+        """The Normalized Burn Index"""
         label1, label2 = lu.NBR_BANDS[self.spacecraft]
         try:
             arr1 = self.__getattr__(label1).data
@@ -409,11 +411,26 @@ class Landsatscene(USGSL1scene):
     
     @property
     def TIRband(self):
+        """Label of a suitable thermal infrared band for the scene. 
+        Used in loops over Landsat scenes from multiple platform/sensor 
+        combinations. Will return B6 for L4/5, B6H for L7, B10 for L8."""
         label = lu.getTIRlabel(self.spacecraft)
         return self.__getattr__(label)
     
     @property
     def ltkcloud(self):
+        """Cloud masking and landcover classification with the 
+        Luo–Trishchenko–Khlopenkov algorithm
+        (doi:10.1109/LGRS.2010.2095409).
+        
+        Returns:
+          A numpy array of the same shape as the input data
+          The classes signify:
+          - 1.0 - bare ground
+          - 2.0 - ice/snow
+          - 3.0 - water
+          - 4.0 - cloud
+          - 5.0 - vegetated soil"""
         return lu.LTKcloud(self)
         
     @property
