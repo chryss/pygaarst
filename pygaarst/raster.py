@@ -27,24 +27,25 @@ try:
     from pyproj import Proj
 except ImportError:
     LOGGER.warning("PROJ4 is not available. Any method requiring coordinate transform will fail.")
-from netCDF4 import Dataset as netCDF
+# from netCDF4 import Dataset as netCDF
 try:
     import h5py
 except ImportError:
     LOGGER.warning("The h5py library couldn't be imported, so HDF5 files aren't supported")
-    
+
 import pygaarst.landsatutils as lu
+import pygaarst.mtlutils as mtl
 
 # GDAL doesn't by default use exceptions
 gdal.UseExceptions()
 
 # custom exception
 class PygaarstRasterError(Exception):
+    """Custom exception for errors during raster processing in Pygaarst"""
     pass
 
 # helper function
-
-def test_outside(testx, lower, upper):
+def _test_outside(testx, lower, upper):
     """
     True if testx, or any element of it is outside [lower, upper).
     
@@ -56,9 +57,11 @@ def test_outside(testx, lower, upper):
 
 class GeoTIFF(object):
     """
-    A class providing access to a GeoTIFF file
-    Parameters:
-    filepath: full or relative path to a valid data file in GeoTIFF format
+    Represents a GeoTIFF file for data access and processing and provides
+    a number of useful methods and attributes.
+    
+    Arguments:
+      filepath (str): the full or relative file path
     """
     def __init__(self, filepath):
         try:
@@ -78,118 +81,149 @@ class GeoTIFF(object):
         self.lry = self.uly + self.ncol * self._gtr[4] + self.nrow * self._gtr[5]
         if self._gtr[2] != 0 or self._gtr[4] != 0:
             LOGGER.warning("The dataset is not north-up. The geotransform is given by: (%s). Northing and easting values will not have expected meaning." % ', '.join([str(item) for item in nsdic._gtr]))
-
+    
     @property
     def data(self):
+        """2D numpy array for single-band GeoTIFF file data. Otherwise, 3D. """
         return self.dataobj.ReadAsArray()
-
+    
     @property
     def projection(self):
+        """The dataset's coordinate reference system as a Well-Known String (WKT)"""
         return self.dataobj.GetProjection()
-
+    
     @property
     def proj4(self):
+        """The dataset's coordinate reference system as a PROJ4 string"""
         osrref = osr.SpatialReference()
         osrref.ImportFromWkt(self.projection)
         return osrref.ExportToProj4()
-
+    
     @property
     def coordtrans(self):
+        """A PROJ4 Proj object, which is able to perform coordinate
+        transformations"""
         return Proj(self.proj4)
-
+    
     @property
     def delx(self):
+        """The sampling distance in x-direction, in physical units (eg metres)"""
         return self._gtr[1]
-        
+    
     @property
     def dely(self):
+        """The sampling distance in y-direction, in physical units (eg metres)"""
         return self._gtr[5]
-        
+    
     @property
     def easting(self): 
-        """Easting means x-coordinates of pixel corners, ncol+1."""
+        """The x-coordinates of first row pixel corners, 
+        as a numpy array: upper-left corner of upper-left pixel 
+        to upper-right corner of upper-right pixel (ncol+1)."""
         return np.arange(self.ulx, self.lrx + self.delx, self.delx)
-
+    
     @property
     def northing(self): 
-        """Northing means y-coordinates of pixel corners, nrow+1."""
+        """The y-coordinates of first column pixel corners, 
+        as a numpy array: upper-left corner of upper-left pixel to 
+        lower-left corner of lower-left pixel (ncol+1)."""
         return np.arange(self.lry, self.uly - self.dely, -self.dely)
-
+    
     @property
     def x_pxcenter(self): 
-        """x-coordinates of pixel centers, ncol."""
+        """The x-coordinates of pixel centers, as a numpy array ncol."""
         return np.arange(self.ulx + self.delx/2, self.lrx + self.delx/2, self.delx)
-
+    
     @property
     def y_pxcenter(self): 
         """y-coordinates of pixel centers, nrow."""
         return np.arange(self.lry - self.dely/2, self.uly - self.dely/2, -self.dely)
-
-    @property
-    def northing(self): 
-        """Northing means y-coordinates of pixel corners, nrow+1."""
-        return np.arange(self.lry, self.uly - self.dely, -self.dely)
     
     @property
     def _XY(self):
         return np.meshgrid(self.easting, self.northing)
-
+    
     @property
     def _XY_pxcenter(self):
         return np.meshgrid(self.x_pxcenter, self.y_pxcenter)
     
     @property
-    def LonLat_pxcorner(self):
+    def _LonLat_pxcorner(self):
         return self.coordtrans(*self._XY, inverse=True)
     
     @property
-    def LonLat_pxcenter(self):
-        return self.coordtrans(*self._XY_center, inverse=True)
-        
+    def _LonLat_pxcenter(self):
+        return self.coordtrans(*self._XY_pxcenter, inverse=True)
+    
     @property
     def Lon(self):
-        return self.LonLat_pxcorner[0]
-
+        """Longitude coordinate of each pixel corner, as an array"""
+        return self._LonLat_pxcorner[0]
+    
     @property
     def Lat(self):
-        return self.LonLat_pxcorner[1]
-
+        """Latitude coordinate of each pixel corner, as an array"""
+        return self._LonLat_pxcorner[1]
+    
+    @property
+    def Lon(self):
+        """Longitude coordinate of each pixel center, as an array"""
+        return self._LonLat_pxcenter[0]
+    
+    @property
+    def Lat(self):
+        """Latitude coordinate of each pixel center, as an array"""
+        return self._LonLat_pxcenter[1]
+    
     def ij2xy(self, i, j):
         """
-        Convert array coordinate pair(s) to easting/northing coordinate pairs(s).
+        Converts array index pair(s) to easting/northing coordinate pairs(s).
         
         NOTE: array coordinate origin is in the top left corner whereas 
         easting/northing origin is in the bottom left corner. Easting and northing
         are floating point numbers, and refer to the top-left corner coordinate of the 
         pixel. i runs from 0 to nrow-1, j from 0 to ncol-1
-        Input: accepts scalars or numpy arrays, integer valued, >=0.
+        
+        Arguments: 
+            i (int): scalar or array of row coordinate index
+            j (int): scalar or array of column coordinate index
+            
+        Returns:
+            x (float): scalar or array of easting coordinates
+            y (float): scalar or array of northing coordinates
         """
-        if test_outside(i, 0, self.nrow) or test_outside(j, 0, self.ncol):
+        if _test_outside(i, 0, self.nrow) or _test_outside(j, 0, self.ncol):
             raise PygaarstRasterError("Coordinates %d, %d out of bounds" % (i, j))
         x = self.easting[0] + j * self.delx
         y = self.northing[-1] + i * self.dely
         return x, y
-
+    
     def xy2ij(self, x, y):
         """
         Convert easting/northing coordinate pair(s) to array coordinate pairs(s).
         
-        NOTE: array coordinate origin is in the top left corner whereas 
-        easting/northing origin is in the bottom left corner. Easting and northing
-        are floating point numbers, and refer to the top-left corner coordinate of the 
-        pixel. i runs from 0 to nrow-1, j from 0 to ncol-1
-        Input: accepts scalars or numpy arrays.
+        NOTE: see note at ij2xy()
+
+        Arguments:
+            x (float): scalar or array of easting coordinates
+            y (float): scalar or array of northing coordinates
+            
+        Returns:
+            i (int): scalar or array of row coordinate index
+            j (int): scalar or array of column coordinate index    
         """
-        if ( test_outside(x, self.easting[0], self.easting[-1]) or
-             test_outside(y, self.northing[0], self.northing[-1])):
+        if ( _test_outside(x, self.easting[0], self.easting[-1]) or
+             _test_outside(y, self.northing[0], self.northing[-1])):
             raise PygaarstRasterError("Coordinates out of bounds")
         i = np.floor((1 - (y  - self.northing[0])/(self.northing[-1] - \
             self.northing[0])) * self.nrow)
         j = np.floor((x - self.easting[0])/(self.easting[-1] - self.easting[0]) \
             * self.ncol)
         return i, j
-
+    
     def simpleplot(self):
+        """Quick and dirty plot of each band (channel, dataset) in the image.
+        Requires Matplotlib."""
         import matplotlib.pyplot as plt
         numbands = self.dataobj.RasterCount
         if numbands == 1:
@@ -199,19 +233,21 @@ class GeoTIFF(object):
             for idx in range(numbands):
                 fig = plt.figure(figsize=(15, 10))
                 plt.imshow(self.data[idx, :, :], cmap='bone')
-
+    
     def clone(self, newpath, newdata):
         """
-        Returns new GeoTIFF object, changed data, same georeference.
+        Creates new GeoTIFF object from an existing one: new data, same georeference.
         
-        Input:
-        newpath: valid file path
-        newdata: numpy array, 2 or 3-dim
+        Arguments:
+            newpath: valid file path
+            newdata: numpy array, 2 or 3-dim
+            
         Returns:
-        raster.GeoTIFF object
+            A raster.GeoTIFF object
         """
         # convert Numpy dtype objects to GDAL type codes
         # see https://gist.github.com/chryss/8366492
+        
         NPDTYPE2GDALTYPECODE = {
           "uint8": 1, 
           "int8": 1, 
@@ -258,161 +294,61 @@ class GeoTIFF(object):
         gtiff = None
         return GeoTIFF(newpath)
 
-class Landsatband(GeoTIFF):
-    """
-    Represents a band of a Landsat scene.
-
-    Implemented: TM/ETM+ L5/7 and OLI/TIRS L8, both old and new metadata format
-    """
-    def __init__(self, filepath, band=None, scene=None):
-        self.band = band
-        self.scene = scene
-        self.meta = None
-        if self.scene:
-            self.meta = self.scene.meta
-        if not self.meta:
-            try:
-                self.meta = lu.parsemeta(os.path.basename(self.filepath))
-            except AttributeError:
-                LOGGER.warning(
-                "Could not find metadata for band object. Set it explicitly: " +
-                "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
-                )
-        super(Landsatband, self).__init__(filepath)
-
-    @property
-    def spacecraft(self):
-        try:
-            return self.scene.spacecraft
-        except AttributeError:
-            try:
-                return self.meta['PRODUCT_METADATA']['SPACECRAFT_ID']
-            except AttributeError:
-                LOGGER.warning(
-                "Spacecraft not set - should be 'L4', 'L5', '7', or 'L8'. Set a metadata file explicitly: " +
-                "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
-                )
-
-    @property
-    def newmetaformat(self):
-        try:
-            return self.scene.newmetaformat
-        except AttributeError:
-            try:
-                versionstr = self.meta['METADATA_FILE_INFO']['PROCESSING_SOFTWARE_VERSION']
-                return True
-            except KeyError:
-                versionstr = self.meta['PRODUCT_METADATA']['PROCESSING_SOFTWARE']
-                return False
-            except AttributeError:
-                LOGGER.warning(
-                "Could not find metadata for band object. Set it explicitly:" +
-                "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
-                )
-
-    @property
-    def radiance(self):
-        """L8 . Others TBD."""
-        if not self.meta:
-            raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
-        if self.spacecraft == 'L8':
-            self.gain = self.meta['RADIOMETRIC_RESCALING']['RADIANCE_MULT_BAND_%s' % self.band]
-            self.bias = self.meta['RADIOMETRIC_RESCALING']['RADIANCE_ADD_BAND_%s' % self.band]
-            return lu.dn2rad(self.data, self.gain, self.bias)
-        elif self.newmetaformat:
-            bandstr = self.band.replace('L', '_VCID_1').replace('H', '_VCID_2')
-            lmax = self.meta['MIN_MAX_RADIANCE']['RADIANCE_MAXIMUM_BAND_%s' % bandstr]
-            lmin = self.meta['MIN_MAX_RADIANCE']['RADIANCE_MINIMUM_BAND_%s' % bandstr]
-            qcalmax = self.meta['MIN_MAX_PIXEL_VALUE']['QUANTIZE_CAL_MAX_BAND_%s' % bandstr]
-            qcalmin = self.meta['MIN_MAX_PIXEL_VALUE']['QUANTIZE_CAL_MIN_BAND_%s' % bandstr]
-            gain, bias = lu.gainbias(lmax, lmin, qcalmax, qcalmin)
-            return lu.dn2rad(self.data, gain, bias)
-        else:
-            bandstr = self.band.replace('L', '1').replace('H', '2')
-            lmax = self.meta['MIN_MAX_RADIANCE']['LMAX_BAND%s' % bandstr]
-            lmin = self.meta['MIN_MAX_RADIANCE']['LMIN_BAND%s' % bandstr]
-            qcalmax = self.meta['MIN_MAX_PIXEL_VALUE']['QCALMAX_BAND%s' % bandstr]
-            qcalmin = self.meta['MIN_MAX_PIXEL_VALUE']['QCALMIN_BAND%s' % bandstr]
-            gain, bias = lu.gainbias(lmax, lmin, qcalmax, qcalmin)
-            return lu.dn2rad(self.data, gain, bias)
-        return None
-
-    @property
-    def reflectance(self):
-        """L5-8 . Others TBD."""
-        if not self.meta:
-            raise PygaarstRasterError("Impossible to retrieve metadata for band. No reflectance calculation possible.")
-        if self.spacecraft == 'L8':
-            self.gain = self.meta['RADIOMETRIC_RESCALING']['REFLECTANCE_MULT_BAND_%s' % self.band]
-            self.bias = self.meta['RADIOMETRIC_RESCALING']['REFLECTANCE_ADD_BAND_%s' % self.band]
-            sedeg = self.meta['IMAGE_ATTRIBUTES']['SUN_ELEVATION']
-            rawrad = lu.dn2rad(self.data, self.gain, self.bias)
-            return rawrad/(np.sin(sedeg*np.pi/180))
-        elif self.spacecraft in ['L5', 'L7']:
-            if self.newmetaformat:
-                sedeg = self.meta['IMAGE_ATTRIBUTES']['SUN_ELEVATION'] 
-                dac = self.meta['PRODUCT_METADATA']['DATE_ACQUIRED']
-            else:
-                sedeg = self.meta['PRODUCT_PARAMETERS']['SUN_ELEVATION'] 
-                dac = self.meta['PRODUCT_METADATA']['ACQUISITION_DATE']
-            juliandac = int(datetime.date.strftime(dac, '%j'))
-            d = lu.getd(juliandac)
-            esun = lu.getesun(self.spacecraft, self.band)
-            rad = self.radiance
-            return (np.pi * d * d * rad)/(esun * np.sin(sedeg*np.pi/180))
-        else:
-            return None
-
-    @property
-    def tKelvin(self):
-        """L8 band 10 and 11 only. Others TBD."""
-        if not self.scene:
-            raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
-        if (  (self.spacecraft == 'L8' and self.band not in ['10', '11'] )  or
-              ( self.spacecraft != 'L8' and not self.band.startswith('6') )):
-            LOGGER.warning("Automatic brightness Temp not implemented. Cannot calculate temperature. Sorry.")
-            return None
-        elif self.spacecraft == 'L8':
-            self.k1 =  self.meta['TIRS_THERMAL_CONSTANTS']['K1_CONSTANT_BAND_%s' % self.band]
-            self.k2 =  self.meta['TIRS_THERMAL_CONSTANTS']['K2_CONSTANT_BAND_%s' % self.band]
-        elif self.spacecraft in ['L4', 'L5', 'L7']:
-            self.k1, self.k2 = lu.getKconstants(self.spacecraft)
-        return lu.rad2kelvin(self.radiance, self.k1, self.k2)
-
 # helper function
 def _get_spacecraftid(spid):
     """
-    'Landsat_8' -> 'L8', 'Landsat5' -> 'L5' etc
+    Normalizes Landsat SPACECRAFT_ID fields 'Landsat_8' -> 'L8', 'Landsat5' -> 'L5' etc
     """
-    return spid[0].upper() + spid[-1]
+    if spid.upper().startswith("LANDSAT"):
+        return spid[0].upper() + spid[-1]
+    else:
+        return spid
+        
+def _validate_platformorigin(platform, spid, sensorid=None):
+    """Helper function to validate the correct class for the data was called"""
+    if (platform.lower() == 'landsat'):
+        if spid not in lu.LANDSATBANDS:
+            LOGGER.warning("%s class was used to load data with unrecognized platform ID: %s." % (platform, spid))
+    elif (spid == 'EO1' and platform != sensorid):
+        LOGGER.warning("%s class was used for data from sensor %s." % (platform, sensorid))
 
-class Landsatscene(object):
+class USGSL1scene(object):
+    """
+    A container object for multi- and hyperspectral satellite imagery scenes as provided
+    as Level 1 (at-sensor calibrated scaled radiance data) by various USGS data portals: 
+    Landsat 4/5 TM, Landsat 7 ETM+, Landsat 7 OLI/TIRS, EO1 ALI and EO1 Hyperion
+    
+    Arguments: 
+        dirname (str): name of directory that contains all scene files.
+    """
+    def __init__(self, dirname):
+        self.dirname = dirname
+        self.infix = ''
+        metadata = mtl.parsemeta(dirname)
+        self.meta = metadata['L1_METADATA_FILE']
+        self.spacecraft = _get_spacecraftid(
+            self.meta['PRODUCT_METADATA']['SPACECRAFT_ID']
+            )
+        self.sensor = self.meta['PRODUCT_METADATA']['SENSOR_ID']
+        self.bands = {}
+
+class Landsatscene(USGSL1scene):
     """
     A container object for TM/ETM+ L5/7 and OLI/TIRS L8 scenes. Input: directory name,
     which is expected to contain all scene files.
     """
-
     def __init__(self, dirname):
-        self.dirname = dirname
-        self.infix = ''
-        metadata = lu.parsemeta(dirname)
-        self.meta = metadata['L1_METADATA_FILE']
-        # first of all, find out software version, metadata format type (new or old)
-        # and satellite (L5, L7, L8)
+        super(Landsatscene, self).__init__(dirname)
         # Metadata change, see http://landsat.usgs.gov/Landsat_Metadata_Changes.php
         self.newmetaformat = True
-        self.spacecraft = _get_spacecraftid(
-            self.meta['PRODUCT_METADATA']['SPACECRAFT_ID']
-            )
         try:
             versionstr = self.meta['METADATA_FILE_INFO']['PROCESSING_SOFTWARE_VERSION']
         except KeyError:
             versionstr = self.meta['PRODUCT_METADATA']['PROCESSING_SOFTWARE']
             self.newmetaformat = False
-        self.majorswversion = int(versionstr.split('.')[0][5:])
-        self.bands = {}
         self.permissiblebands = lu.get_bands(self.spacecraft)
-
+        _validate_platformorigin('Landsat', self.spacecraft)
+        
     def __getattr__(self, bandname):
         """
         Override _gettattr__() for bandnames of the form bandN with N in l.LANDSATBANDS.
@@ -489,17 +425,282 @@ class Landsatscene(object):
         else:
             return lu.naivethermal(self.band6)
 
+class Hyperionscene(USGSL1scene):
+    """
+    A container object for EO-1 Hyperion scenes. Input: directory name,
+    which is expected to contain all scene files.
+    """
+    
+    def __init__(self, dirname):
+        super(Hyperionscene, self).__init__(dirname)
+        self.permissiblebands = [str(num) for num in range(1, 243)]
+        self.calibratedbands = [str(num) for num in range(8, 58) + range(77, 225)]
+        _validate_platformorigin('HYPERION', self.spacecraft, self.sensor)
+        
+    def __getattr__(self, bandname):
+        """
+        Override _gettattr__() for bandnames of the form bandN with N in the bands 
+        permissible for Hyperion (see https://eo1.usgs.gov/sensors/hyperioncoverage).
+        Warn if band is a non-calibrated one.
+        Allows for infixing the filename just before the .TIF extension for
+        pre-processed bands.
+        """
+        # see https://eo1.usgs.gov/sensors/hyperioncoverage
+        isband = False
+        head, sep, tail = bandname.lower().partition('band')
+        try:
+            band = tail.upper()
+            if head == '':
+                if band in self.permissiblebands:
+                    isband = True
+                    if band not in self.calibratedbands:
+                        LOGGER.warning('Hyperion band %s is not calibrated.' % band)
+                else:
+                    raise PygaarstRasterError(
+                        "EO-1 Hyperion does not have a band %s. Permissible band labels are between 1 and 242.")
+        except ValueError:
+            pass
+        if isband:
+            keyname = "BAND%s_FILE_NAME" % band
+            bandfn = self.meta['PRODUCT_METADATA'][keyname]
+            base, ext = os.path.splitext(bandfn)
+            postprocessfn = base + self.infix + ext
+            bandpath = os.path.join(self.dirname, postprocessfn)
+            self.bands[band] = Hyperionband(bandpath, band=band, scene=self)
+            return self.bands[band]
+        else:
+            return object.__getattribute__(self, bandname)
+
+class ALIscene(USGSL1scene):
+    """
+    A container object for EO-1 ALI scenes. Input: directory name,
+    which is expected to contain all scene files.
+    """
+    
+    def __init__(self, dirname):
+        super(ALIscene, self).__init__(dirname)
+        self.permissiblebands = [str(num) for num in range(1, 11)]
+        _validate_platformorigin('ALI', self.spacecraft, self.sensor)
+        
+    def __getattr__(self, bandname):
+        """
+        Override _gettattr__() for bandnames of the form bandN with N in the bands 
+        permissible for Hyperion (see https://eo1.usgs.gov/sensors/hyperioncoverage).
+        Warn if band is a non-calibrated one.
+        Allows for infixing the filename just before the .TIF extension for
+        pre-processed bands.
+        """
+        # see https://eo1.usgs.gov/sensors/hyperioncoverage
+        isband = False
+        head, sep, tail = bandname.lower().partition('band')
+        try:
+            band = tail.upper()
+            if head == '':
+                if band in self.permissiblebands:
+                    isband = True
+                else:
+                    raise PygaarstRasterError(
+                        "EO-1 ALI does not have a band %s. Permissible band labels are between 1 and 10.")
+        except ValueError:
+            pass
+        if isband:
+            # Note: Landsat 7 has low and high gain bands 6, with different label names
+            keyname = "BAND%s_FILE_NAME" % band
+            bandfn = self.meta['PRODUCT_METADATA'][keyname]
+            base, ext = os.path.splitext(bandfn)
+            postprocessfn = base + self.infix + ext
+            bandpath = os.path.join(self.dirname, postprocessfn)
+            self.bands[band] = Hyperionband(bandpath, band=band, scene=self)
+            return self.bands[band]
+        else:
+            return object.__getattribute__(self, bandname)
+
+class USGSL1band(GeoTIFF):
+    """
+    Represents a band of a USGSL1scene. This class is intended to be used via chlid classes:
+    Landsatband, Hyperionband, ALIband
+    """
+    def __init__(self, filepath, band=None, scene=None):
+        self.band = band
+        self.scene = scene
+        self.meta = None
+        if self.scene:
+            self.meta = self.scene.meta
+        if not self.meta:
+            try:
+                self.meta = lu.parsemeta(os.path.basename(self.filepath))
+            except AttributeError:
+                LOGGER.warning(
+                "Could not find metadata for band object. Set it explicitly: " +
+                "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
+                )
+        super(USGSL1band, self).__init__(filepath)
+
+    @property
+    def spacecraft(self):
+        try:
+            return self.scene.spacecraft
+        except AttributeError:
+            try:
+                return self.meta['PRODUCT_METADATA']['SPACECRAFT_ID']
+            except AttributeError:
+                LOGGER.warning(
+                "Spacecraft not set - should be 'L4', 'L5', '7', 'L8' or 'EO1'. Set a metadata file explicitly: " +
+                "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
+                )
+
+    @property
+    def sensor(self):
+        try:
+            return self.scene.sensor
+        except AttributeError:
+            try:
+                return self.meta['PRODUCT_METADATA']['SENSOR_ID']
+            except AttributeError:
+                LOGGER.warning('Sensor not set -- please verify metadata')
+
+
+class Landsatband(USGSL1band):
+    """
+    Represents a band of a Landsat scene.
+
+    Implemented: TM/ETM+ L5/7 and OLI/TIRS L8, both old and new metadata format
+    """
+    def __init__(self, filepath, band=None, scene=None):
+        super(Landsatband, self).__init__(filepath, band=band, scene=scene)
+        _validate_platformorigin('Landsat', self.spacecraft)
+
+    @property
+    def newmetaformat(self):
+        try:
+            return self.scene.newmetaformat
+        except AttributeError:
+            try:
+                versionstr = self.meta['METADATA_FILE_INFO']['PROCESSING_SOFTWARE_VERSION']
+                return True
+            except KeyError:
+                versionstr = self.meta['PRODUCT_METADATA']['PROCESSING_SOFTWARE']
+                return False
+            except AttributeError:
+                LOGGER.warning(
+                "Could not find metadata for band object. Set it explicitly:" +
+                "[bandobject].meta = pygaarst.landsatutils.parsemeta([metadatafile])"
+                )
+
+    @property
+    def radiance(self):
+        """Radiance in W / um / m^2 / sr derived from digital number and metadata, as numpy array"""
+        if not self.meta:
+            raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
+        if self.spacecraft == 'L8':
+            self.gain = self.meta['RADIOMETRIC_RESCALING']['RADIANCE_MULT_BAND_%s' % self.band]
+            self.bias = self.meta['RADIOMETRIC_RESCALING']['RADIANCE_ADD_BAND_%s' % self.band]
+            return lu.dn2rad(self.data, self.gain, self.bias)
+        elif self.newmetaformat:
+            bandstr = self.band.replace('L', '_VCID_1').replace('H', '_VCID_2')
+            lmax = self.meta['MIN_MAX_RADIANCE']['RADIANCE_MAXIMUM_BAND_%s' % bandstr]
+            lmin = self.meta['MIN_MAX_RADIANCE']['RADIANCE_MINIMUM_BAND_%s' % bandstr]
+            qcalmax = self.meta['MIN_MAX_PIXEL_VALUE']['QUANTIZE_CAL_MAX_BAND_%s' % bandstr]
+            qcalmin = self.meta['MIN_MAX_PIXEL_VALUE']['QUANTIZE_CAL_MIN_BAND_%s' % bandstr]
+            gain, bias = lu.gainbias(lmax, lmin, qcalmax, qcalmin)
+            return lu.dn2rad(self.data, gain, bias)
+        else:
+            bandstr = self.band.replace('L', '1').replace('H', '2')
+            lmax = self.meta['MIN_MAX_RADIANCE']['LMAX_BAND%s' % bandstr]
+            lmin = self.meta['MIN_MAX_RADIANCE']['LMIN_BAND%s' % bandstr]
+            qcalmax = self.meta['MIN_MAX_PIXEL_VALUE']['QCALMAX_BAND%s' % bandstr]
+            qcalmin = self.meta['MIN_MAX_PIXEL_VALUE']['QCALMIN_BAND%s' % bandstr]
+            gain, bias = lu.gainbias(lmax, lmin, qcalmax, qcalmin)
+            return lu.dn2rad(self.data, gain, bias)
+        return None
+
+    @property
+    def reflectance(self):
+        """Reflectance between 0 and 1 derived from digital number and metadata, as numpy array"""
+        if not self.meta:
+            raise PygaarstRasterError("Impossible to retrieve metadata for band. No reflectance calculation possible.")
+        if self.spacecraft == 'L8':
+            self.gain = self.meta['RADIOMETRIC_RESCALING']['REFLECTANCE_MULT_BAND_%s' % self.band]
+            self.bias = self.meta['RADIOMETRIC_RESCALING']['REFLECTANCE_ADD_BAND_%s' % self.band]
+            sedeg = self.meta['IMAGE_ATTRIBUTES']['SUN_ELEVATION']
+            rawrad = lu.dn2rad(self.data, self.gain, self.bias)
+            return rawrad/(np.sin(sedeg*np.pi/180))
+        elif self.spacecraft in ['L5', 'L7']:
+            if self.newmetaformat:
+                sedeg = self.meta['IMAGE_ATTRIBUTES']['SUN_ELEVATION'] 
+                dac = self.meta['PRODUCT_METADATA']['DATE_ACQUIRED']
+            else:
+                sedeg = self.meta['PRODUCT_PARAMETERS']['SUN_ELEVATION'] 
+                dac = self.meta['PRODUCT_METADATA']['ACQUISITION_DATE']
+            juliandac = int(datetime.date.strftime(dac, '%j'))
+            d = lu.getd(juliandac)
+            esun = lu.getesun(self.spacecraft, self.band)
+            rad = self.radiance
+            return (np.pi * d * d * rad)/(esun * np.sin(sedeg*np.pi/180))
+        else:
+            return None
+
+    @property
+    def tKelvin(self):
+        """Radiant (brightness) temperature at the sensor in K, implemented for Landsat thermal infrared bands."""
+        if not self.scene:
+            raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
+        if (  (self.spacecraft == 'L8' and self.band not in ['10', '11'] )  or
+              ( self.spacecraft != 'L8' and not self.band.startswith('6') )):
+            LOGGER.warning("Automatic brightness Temp not implemented. Cannot calculate temperature. Sorry.")
+            return None
+        elif self.spacecraft == 'L8':
+            self.k1 =  self.meta['TIRS_THERMAL_CONSTANTS']['K1_CONSTANT_BAND_%s' % self.band]
+            self.k2 =  self.meta['TIRS_THERMAL_CONSTANTS']['K2_CONSTANT_BAND_%s' % self.band]
+        elif self.spacecraft in ['L4', 'L5', 'L7']:
+            self.k1, self.k2 = lu.getKconstants(self.spacecraft)
+        return lu.rad2kelvin(self.radiance, self.k1, self.k2)
+
+class Hyperionband(USGSL1band):
+    """
+    Represents a band of an EO-1 Hyperion scene.
+    """
+    def __init__(self, filepath, band=None, scene=None):
+        super(Hyperionband, self).__init__(filepath, band=band, scene=scene)
+        _validate_platformorigin('HYPERION', self.spacecraft, self.sensor)
+    
+    @property
+    def radiance(self):
+        """Radiance in W / um / m^2 / sr derived from digital number and metadata, as numpy array"""
+        if not self.meta:
+            raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
+        if int(self.band) <= 70:
+            return self.data / self.meta['RADIANCE_SCALING']['SCALING_FACTOR_VNIR']
+        else:
+            return self.data / self.meta['RADIANCE_SCALING']['SCALING_FACTOR_SWIR']
+
+class ALIband(USGSL1band):
+    """
+    Represents a band of an EO-1 ALI scene.
+    """
+    def __init__(self, filepath, band=None, scene=None):
+        super(ALIband, self).__init__(filepath, band=band, scene=scene)
+        _validate_platformorigin('ALI', self.spacecraft, self.sensor)
+    
+    @property
+    def radiance(self):
+        """Radiance in W / um / m^2 / sr derived from digital number and metadata, as numpy array"""
+        if not self.meta:
+            raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
+        self.gain = self.meta['RADIANCE_SCALING']['BAND%s_SCALING_FACTOR' % self.band]
+        self.bias = self.meta['RADIANCE_SCALING']['BAND%s_OFFSET' % self.band]
+        return lu.dn2rad(self.data, self.gain, self.bias)
+
 class NetCDF(object):
     pass
-
 
 class HDF5(object):
     """
     A class providing access to a generic HDF5
-    Parameters:
-    filepath: full or relative path to the data file
+
+    Arguments:
+        filepath (str): full or relative path to the data file
     """
-    import h5py
     def __init__(self, filepath):
         try:
             LOGGER.info("Opening %s" % filepath)
@@ -522,18 +723,15 @@ def _getlabel(groupname):
     else:
         return labelelems[-2]
 
-   
 class VIIRSHDF5(HDF5):
     """
     A class providing access to a VIIRS HDF5 file or dataset
     Parameters:
     filepath: full or relative path to the data file
     geofilepath (optional): override georeference array file from
-      metadata; full or relative path to georeference file
+    metadata; full or relative path to georeference file
     variable (optional): name of a variable to access
     """
-
-
     def __init__(self, filepath, geofilepath=None, variable=None):
         super(VIIRSHDF5, self).__init__(filepath)
         self.bandnames = self.dataobj['All_Data'].keys()
