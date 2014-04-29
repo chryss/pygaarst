@@ -1,9 +1,9 @@
 GDAL
 numpy
 h5py
-#pyhdf
-netCDF4
 pyproj
+# probably:
+# netCDF4
 # shapely
 # fiona
 # recommended:

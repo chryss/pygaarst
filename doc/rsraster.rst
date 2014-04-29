@@ -5,11 +5,23 @@ Working with specific remote sensing data
 Landsat
 =======
 
-The LandsatScene class
-----------------------
+Usage
+-----
 
-The LandsatBand class
+
+
+The Landsatscene class
+----------------------
+.. autoclass:: pygaarst.raster.Landsatscene
+    :members:
+    :undoc-members:
+    
+The Landsatband class
 ---------------------
+
+.. autoclass:: pygaarst.raster.Landsatband
+    :members:
+    :undoc-members:
 
 Reflectance, radiance and brightness temperature
 
@@ -22,14 +34,21 @@ Landsat metadata parser
 
 MODIS swath data
 ================
+*[This is a little harder...]*
 
 Suomi/NPP VIIRS 
 ===============
-
+.. autoclass:: pygaarst.raster.VIIRSHDF5
+    :members:
+    :undoc-members:
 
 MODAPS data download API client
 ===============================
+-p 
 
+.. automodule:: pygaarst.modapsclient
+    :members:
+    :undoc-members:
 
 
 
