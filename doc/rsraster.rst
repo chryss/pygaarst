@@ -197,10 +197,3 @@ This is a REST-full web service client that implements the NASA LAADSWEB data AP
     :members:
     :undoc-members:
 
-Further examples
-================
-A step-by-step example of using :mod:`pygaarst.raster` to access and plot
-VIIRS and Landsat data is worked through in `this IPython Notebook`_.
-
-.. _this IPython Notebook: http://nbviewer.ipython.org/gist/anonymous/7593127
-
