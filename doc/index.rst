@@ -14,7 +14,7 @@ Pygaarst: geospatial analysis and remote sensing tools for Python
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    install
    genericraster
