@@ -60,3 +60,7 @@ At the current stage, there is no stable release for Pygaarst yet. The latest co
 Usage example
 =============
 
+A step-by-step example of using :mod:`pygaarst.raster` to access and plot
+VIIRS and Landsat data is worked through in `this IPython Notebook`_.
+
+.. _this IPython Notebook: http://nbviewer.ipython.org/gist/anonymous/7593127
