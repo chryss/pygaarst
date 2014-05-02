@@ -32,32 +32,17 @@ Future functionality is expected to require the following packages:
 **Please note** that installing the prerequisites may, depending on your configuration, 
 require some thoughtful planning:
 
-- Installing **Numpy** via ``pip`` will require a C and a Fortran 77 
-compiler to build the extension modules. A good alternative is to use 
-`a binary distribution`_. The same is true for **Matplotlib**.
-- **GDAL**, **pyproj**, **h5py**, **netCDF4** and **GEOS** (which is a prerequisite 
-for shapely and the Basemap toolkit) require libraries to be installed before 
-the Python bindings can be installed. The easiest way to do this in a consistent 
-manner is often to use a package manager on GNU/Linux or OS X. For Windows, 
-binary packages are available.
-- The **Basemap** toolkit for Matplotlib is a very large install. For Windows, a binary
-package is available. For GNU/Linux and OS X, it needs to be built from source. 
-If you don't need to plot on maps, you don't need it!
-- In many cases, it may be easiest to install a complete scientific Python software
-package such as the Enthought Python Distribution or Anaconda. There is one exception 
-to this: Pygaarst uses GDAL to access HDF-EOS (HDF4) files such as MODIS and ASTER L1B 
-data and georeference files. GDAL is, however, not by default compiled with HDF4 support. 
-On OS X, it is very difficult to install a GDAL with HDF4 support via either Homebrew
-or the Anaconda Python distribution. The `frameworks provided by kyngchaos`_, however,
-have the required support. I am not sure of the situation on Windows and GNU/Linux at 
-this stage. If installing GDAL with HDF4 support is turing out to be too onerous, 
-I may revisit the decision of using GDAL to access HDF-EOS files. 
+- Installing **Numpy** via ``pip`` will require a C and a Fortran 77 compiler to build the extension modules. A good alternative is to use `a binary distribution`_. The same is true for `Matplotlib`_.
+- **GDAL**, **pyproj**, **h5py**, **netCDF4** and **GEOS** (which is a prerequisite for shapely and the Basemap toolkit) require libraries to be installed before the Python bindings can be installed. The easiest way to do this in a consistent manner is often to use a package manager on GNU/Linux or OS X. For Windows, binary packages are available.
+- The **Basemap** toolkit for Matplotlib is a very large install. For Windows, a binary package is available. For GNU/Linux and OS X, it needs to be built from source. If you don't need to plot on maps, you don't need it!
+- In many cases, it may be easiest to install a complete scientific Python software package such as the Enthought Python Distribution or Anaconda. There is one exception to this: Pygaarst uses GDAL to access HDF-EOS (HDF4) files such as MODIS and ASTER L1B data and georeference files. GDAL is, however, not by default compiled with HDF4 support. On OS X, it is very difficult to install a GDAL with HDF4 support via either Homebrew or the Anaconda Python distribution. The `frameworks provided by kyngchaos`_, however, have the required support. I am not sure of the situation on Windows and GNU/Linux at this stage. If installing GDAL with HDF4 support is turing out to be too onerous, I may revisit the decision of using GDAL to access HDF-EOS files. 
 
-Because of these points, dependencies are not listed in ``setup.py`` for automatic
+To account for individual user preferences, dependencies are not listed in ``setup.py`` for automatic
 install. The ``requirements.txt`` file lists them, however, and can be used to install
-them via PIP.
+them via ``pip``.
 
 My personal installation flow, which works well on OS X is to:
+
 - first install all the system libraries with the correct support options 
 - then install the Python packages via ``pip`` 
 
@@ -65,7 +50,8 @@ Pygaarst is distributed under the terms of the `MIT License`_.
 
 .. _frameworks provided by kyngchaos: http://www.kyngchaos.com/software/frameworks
 .. _MIT License: http://opensource.org/licenses/MIT
-.. _one of the binary distributions : http://docs.scipy.org/doc/numpy/user/install.html
+.. _a binary distribution : http://docs.scipy.org/doc/numpy/user/install.html
+.. _Matplotlib: http://matplotlib.org/1.3.1/users/installing.html
 
 Installation
 ============
