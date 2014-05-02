@@ -29,22 +29,43 @@ Future functionality is expected to require the following packages:
 - fiona (for reading and processing GIS vector files)
 - shapely (for operations on vector data)
 
-**Please note** that several of the required packages rely on libraries that 
-need to be installed either manually or through a suitable package manager 
-beforehand (GDAL, PROJ4, NetCDF, HDF5), require quite a bit of compilation 
-(Numpy, Matplotlib) or are very large (mpl_toolkits.basemap). 
-Depending on your environment, the effort to install them may vary -- 
-they usually come with the large pre-packaged scientific Python distributions. 
-Therefore, these dependencies are not listed in ``setup.py``. 
-For OS X users, the `frameworks provided by kyngchaos`_ may be helpful. 
-For GDAL, in particular, the default options provided by package managers 
-such as Homebrew may not install the more obscure scientific data formats
-that you may be needing (in particular, HDF-EOS for NASA satellite data).
+**Please note** that installing the prerequisites may, depending on your configuration, 
+require some thoughtful planning:
+
+- Installing **Numpy** via ``pip`` will require a C and a Fortran 77 
+compiler to build the extension modules. A good alternative is to use 
+`a binary distribution`_. The same is true for **Matplotlib**.
+- **GDAL**, **pyproj**, **h5py**, **netCDF4** and **GEOS** (which is a prerequisite 
+for shapely and the Basemap toolkit) require libraries to be installed before 
+the Python bindings can be installed. The easiest way to do this in a consistent 
+manner is often to use a package manager on GNU/Linux or OS X. For Windows, 
+binary packages are available.
+- The **Basemap** toolkit for Matplotlib is a very large install. For Windows, a binary
+package is available. For GNU/Linux and OS X, it needs to be built from source. 
+If you don't need to plot on maps, you don't need it!
+- In many cases, it may be easiest to install a complete scientific Python software
+package such as the Enthought Python Distribution or Anaconda. There is one exception 
+to this: Pygaarst uses GDAL to access HDF-EOS (HDF4) files such as MODIS and ASTER L1B 
+data and georeference files. GDAL is, however, not by default compiled with HDF4 support. 
+On OS X, it is very difficult to install a GDAL with HDF4 support via either Homebrew
+or the Anaconda Python distribution. The `frameworks provided by kyngchaos`_, however,
+have the required support. I am not sure of the situation on Windows and GNU/Linux at 
+this stage. If installing GDAL with HDF4 support is turing out to be too onerous, 
+I may revisit the decision of using GDAL to access HDF-EOS files. 
+
+Because of these points, dependencies are not listed in ``setup.py`` for automatic
+install. The ``requirements.txt`` file lists them, however, and can be used to install
+them via PIP.
+
+My personal installation flow, which works well on OS X is to:
+- first install all the system libraries with the correct support options 
+- then install the Python packages via ``pip`` 
 
 Pygaarst is distributed under the terms of the `MIT License`_.
 
 .. _frameworks provided by kyngchaos: http://www.kyngchaos.com/software/frameworks
 .. _MIT License: http://opensource.org/licenses/MIT
+.. _one of the binary distributions : http://docs.scipy.org/doc/numpy/user/install.html
 
 Installation
 ============

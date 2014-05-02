@@ -269,7 +269,6 @@ texinfo_documents = [
 # Autodoc options
 autodoc_member_order = 'groupwise'
 
-
 # On ReadTheDocs, no libraries with C extensions are available
 import sys
 

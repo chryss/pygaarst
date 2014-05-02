@@ -146,19 +146,20 @@ Provides functions used by the `pygaarst.raster.Landsatscene` and `pygaarst.rast
 
 Returns permissible band labels (TM, ETM+ or OLI/TIRS) for a given spacecraft (L4, L5, L7 or L8).
 
-
 **`pygaarst.landsatutils.getKconstants(spacecraftid)`**
 
-**`pygaarst.landsatutils.gainbias(lmax, lmin, qcalmax, qcalmin)`**
+pygaarst.irutils
+---------------------
 
-**`pygaarst.landsatutils.dn2rad(data, gain, bias)`**
+Functions to work with infrared raster data.
 
-**`pygaarst.landsatutils.rad2kelvin(data, k1, k2)`**
+**`pygaarst.irutils.gainbias(lmax, lmin, qcalmax, qcalmin)`**
 
-**`pygaarst.landsatutils.rad2celsius(data, k1, k2)`**
+**`pygaarst.irutils.dn2rad(data, gain, bias)`**
 
-**TODO:** These should be refactored into a `infraredutils` module as 
-they are also used by the classes that handle other sensors than Landsat. 
+**`pygaarst.irutils.rad2kelvin(data, k1, k2)`**
+
+**`pygaarst.irutils.rad2celsius(data, k1, k2)`**
 
 pygaarst.vector
 ---------------
