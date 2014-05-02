@@ -35,6 +35,8 @@ except ImportError:
 
 import pygaarst.landsatutils as lu
 import pygaarst.mtlutils as mtl
+import pygaarst.hyperionutils as hyp
+import pygaarst.irutils as ir
 
 # GDAL doesn't by default use exceptions
 gdal.UseExceptions()
@@ -332,6 +334,20 @@ class USGSL1scene(object):
         self.sensor = self.meta['PRODUCT_METADATA']['SENSOR_ID']
         self.bands = {}
 
+    def get_normdiff(self, label1, label2):
+        """Calculate a generic normalized difference index
+        
+        Arguments:
+          label1, label2 (str): valid band labels, usually of the form 'bandN'
+        """
+        try:
+            arr1 = self.__getattr__(label1).data
+            arr2 = self.__getattr__(label2).data
+            return ir.normdiff(arr1, arr2)
+        except AttributeError:
+            LOGGER.critical("Error accessing bands %s and %s to calculate NBR." % (label1, label2))
+            raise
+
 class Landsatscene(USGSL1scene):
     """
     A container object for TM/ETM+ L5/7 and OLI/TIRS L8 scenes. Input: directory name,
@@ -392,7 +408,7 @@ class Landsatscene(USGSL1scene):
         try:
             arr1 = self.__getattr__(label1).data
             arr2 = self.__getattr__(label2).data
-            return lu.normdiff(arr1, arr2)
+            return ir.normdiff(arr1, arr2)
         except AttributeError:
             LOGGER.critical("Error accessing bands %s and %s to calculate NDVI." % (label1, label2))
             raise
@@ -404,7 +420,7 @@ class Landsatscene(USGSL1scene):
         try:
             arr1 = self.__getattr__(label1).data
             arr2 = self.__getattr__(label2).data
-            return lu.normdiff(arr1, arr2)
+            return ir.normdiff(arr1, arr2)
         except AttributeError:
             LOGGER.critical("Error accessing bands %s and %s to calculate NBR." % (label1, label2))
             raise
@@ -612,23 +628,23 @@ class Landsatband(USGSL1band):
         if self.spacecraft == 'L8':
             self.gain = self.meta['RADIOMETRIC_RESCALING']['RADIANCE_MULT_BAND_%s' % self.band]
             self.bias = self.meta['RADIOMETRIC_RESCALING']['RADIANCE_ADD_BAND_%s' % self.band]
-            return lu.dn2rad(self.data, self.gain, self.bias)
+            return ir.dn2rad(self.data, self.gain, self.bias)
         elif self.newmetaformat:
             bandstr = self.band.replace('L', '_VCID_1').replace('H', '_VCID_2')
             lmax = self.meta['MIN_MAX_RADIANCE']['RADIANCE_MAXIMUM_BAND_%s' % bandstr]
             lmin = self.meta['MIN_MAX_RADIANCE']['RADIANCE_MINIMUM_BAND_%s' % bandstr]
             qcalmax = self.meta['MIN_MAX_PIXEL_VALUE']['QUANTIZE_CAL_MAX_BAND_%s' % bandstr]
             qcalmin = self.meta['MIN_MAX_PIXEL_VALUE']['QUANTIZE_CAL_MIN_BAND_%s' % bandstr]
-            gain, bias = lu.gainbias(lmax, lmin, qcalmax, qcalmin)
-            return lu.dn2rad(self.data, gain, bias)
+            gain, bias = ir.gainbias(lmax, lmin, qcalmax, qcalmin)
+            return ir.dn2rad(self.data, gain, bias)
         else:
             bandstr = self.band.replace('L', '1').replace('H', '2')
             lmax = self.meta['MIN_MAX_RADIANCE']['LMAX_BAND%s' % bandstr]
             lmin = self.meta['MIN_MAX_RADIANCE']['LMIN_BAND%s' % bandstr]
             qcalmax = self.meta['MIN_MAX_PIXEL_VALUE']['QCALMAX_BAND%s' % bandstr]
             qcalmin = self.meta['MIN_MAX_PIXEL_VALUE']['QCALMIN_BAND%s' % bandstr]
-            gain, bias = lu.gainbias(lmax, lmin, qcalmax, qcalmin)
-            return lu.dn2rad(self.data, gain, bias)
+            gain, bias = ir.gainbias(lmax, lmin, qcalmax, qcalmin)
+            return ir.dn2rad(self.data, gain, bias)
         return None
 
     @property
@@ -640,7 +656,7 @@ class Landsatband(USGSL1band):
             self.gain = self.meta['RADIOMETRIC_RESCALING']['REFLECTANCE_MULT_BAND_%s' % self.band]
             self.bias = self.meta['RADIOMETRIC_RESCALING']['REFLECTANCE_ADD_BAND_%s' % self.band]
             sedeg = self.meta['IMAGE_ATTRIBUTES']['SUN_ELEVATION']
-            rawrad = lu.dn2rad(self.data, self.gain, self.bias)
+            rawrad = ir.dn2rad(self.data, self.gain, self.bias)
             return rawrad/(np.sin(sedeg*np.pi/180))
         elif self.spacecraft in ['L5', 'L7']:
             if self.newmetaformat:
@@ -671,7 +687,7 @@ class Landsatband(USGSL1band):
             self.k2 =  self.meta['TIRS_THERMAL_CONSTANTS']['K2_CONSTANT_BAND_%s' % self.band]
         elif self.spacecraft in ['L4', 'L5', 'L7']:
             self.k1, self.k2 = lu.getKconstants(self.spacecraft)
-        return lu.rad2kelvin(self.radiance, self.k1, self.k2)
+        return ir.rad2kelvin(self.radiance, self.k1, self.k2)
 
 class Hyperionband(USGSL1band):
     """
@@ -706,7 +722,7 @@ class ALIband(USGSL1band):
             raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
         self.gain = self.meta['RADIANCE_SCALING']['BAND%s_SCALING_FACTOR' % self.band]
         self.bias = self.meta['RADIANCE_SCALING']['BAND%s_OFFSET' % self.band]
-        return lu.dn2rad(self.data, self.gain, self.bias)
+        return ir.dn2rad(self.data, self.gain, self.bias)
 
 class NetCDF(object):
     pass

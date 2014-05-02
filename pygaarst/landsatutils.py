@@ -5,8 +5,6 @@ pygaarst.landsatutils
 Utility functions for processing Landsat datasets
 
 Created by Chris Waigl on 2013-11-13.
-Implemented:
-  - Landsat
 """
 
 from __future__ import division
@@ -76,7 +74,6 @@ K1_L5_TM = 607.76
 K2_L5_TM = 1260.56
 K1_L7_EMTplus = 666.09
 K2_L7_EMTplus = 1282.71
-KtoC = 273.15
 
 def getKconstants(spacecraftid):
     if spacecraftid == 'L4':
@@ -88,27 +85,12 @@ def getKconstants(spacecraftid):
     else:
         logging.warning('SpacecraftID not in L4, L5, L7. Check metadata or spacecraftID. Or both.')
 
-def gainbias(lmax, lmin, qcalmax, qcalmin):
-    gain = (lmax - lmin)/(qcalmax - qcalmin)
-    bias = (qcalmax*lmin - qcalmin*lmax)/(qcalmax - qcalmin)
-    return gain, bias
-
-def dn2rad(data, gain, bias):
-    return data * gain + bias
-
-def rad2kelvin(data, k1, k2):
-    return np.divide(k2, np.log(np.divide(k1, data) + 1))
-
-def rad2celsius(data, k1, k2):
-    return rad2kelvin(data, k1, k2) - KtoC
-
 TIR_BANDS = {
     'L4': 'band6',
     'L5': 'band6',
     'L7': 'band6',
     'L8': 'band10'
     }
-
 
 def getTIRlabel(spacecraftid, gain='H', l8pref='10'):
     bnd = TIR_BANDS[spacecraftid]
@@ -541,11 +523,7 @@ NBR_BANDS = {
     'L8': ('band5', 'band7'),
     }
 
-def normdiff(array1, array2):
-    return np.divide(
-        array1.astype(np.float32) - array2.astype(np.float32), 
-        array1.astype(np.float32) + array2.astype(np.float32)
-        )
+
 
 # ========================================
 # = Cloud masking algorithms for Landsat =
