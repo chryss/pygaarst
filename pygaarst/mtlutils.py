@@ -85,7 +85,18 @@ def _getmetadataitem(line):
 
 # After reading a line, what state we're in depends on the line and the state before reading
 def _checkstatus(status, line):
-    """Returns state/status after reading the next line"""
+    """Returns state/status after reading the next line. 
+    
+    The status codes are::
+        0 - BEGIN parsing; 1 - ENTER METADATA GROUP, 2 - READ METADATA LINE, 
+        3 - END METDADATA GROUP, 4 - END PARSING
+    
+    Permitted Transitions::
+        0 --> 1, 0 --> 4
+        1 --> 1, 1 --> 2, 1 --> 3
+        2 --> 2, 2 --> 3
+        3 --> 1, 1 --> 3, 3 --> 4
+    """
     newstatus = 0
     if status == 0:
         # begin --> enter metadata group OR end

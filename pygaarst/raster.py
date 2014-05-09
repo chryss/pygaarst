@@ -1,16 +1,18 @@
     # coding: utf-8
 """
-pygaarst.raster
+**pygaarst.raster**
 
-Classes and methods to handle raster file formats.
-Implemented:
-- GeoTIFF
-- Landsatband(GeoTIFF)
-- Landsatscene 
-- HDF5 
-- VIIRSHDF5(HDF)
+**Classes and methods to handle raster file formats.**
+**Implemented**:
+    - GeoTIFF
+    - Landsatband(GeoTIFF)
+    - Landsatscene 
+    - Hyperionscene
+    - Hyperion
+    - HDF5 
+    - VIIRSHDF5(HDF)
 
-Created by Chris Waigl on 2013-09-18.
+*Created by Chris Waigl on 2013-09-18.*
 """
 
 from __future__ import division, print_function
@@ -69,7 +71,7 @@ class GeoTIFF(object):
         try:
             self.dataobj = gdal.Open(filepath)
         except RuntimeError as e:
-            LOGGER.error("Could not open %s: %s" % (filepath, e))
+            LOGGER.error("Could not open %s: %s" % (filepath, e.message))
             raise
         self.filepath = filepath
         self.ncol = self.dataobj.RasterXSize
@@ -83,16 +85,25 @@ class GeoTIFF(object):
         self.lry = self.uly + self.ncol * self._gtr[4] + self.nrow * self._gtr[5]
         if self._gtr[2] != 0 or self._gtr[4] != 0:
             LOGGER.warning("The dataset is not north-up. The geotransform is given by: (%s). Northing and easting values will not have expected meaning." % ', '.join([str(item) for item in nsdic._gtr]))
+        self.dataobj = None
     
     @property
     def data(self):
         """2D numpy array for single-band GeoTIFF file data. Otherwise, 3D. """
-        return self.dataobj.ReadAsArray()
+        if not self.dataobj:
+            self.dataobj = gdal.Open(self.filepath)
+        dat = self.dataobj.ReadAsArray()
+        self.dataobj = None
+        return dat
     
     @property
     def projection(self):
         """The dataset's coordinate reference system as a Well-Known String (WKT)"""
-        return self.dataobj.GetProjection()
+        if not self.dataobj:
+            self.dataobj = gdal.Open(self.filepath)        
+        dat = self.dataobj.GetProjection()
+        self.dataobj = None
+        return dat        
     
     @property
     def proj4(self):
@@ -281,8 +292,8 @@ class GeoTIFF(object):
         try:
             gdaltype = NPDTYPE2GDALTYPECODE[newdata.dtype.name]
         except KeyError as err:
-            raise PygaarstRasterError("Data type in array cannot be converted to GDAL data type: \n%s" % err)
-        proj = self.dataobj.GetProjection()
+            raise PygaarstRasterError("Data type in array cannot be converted to GDAL data type: \n%s" % err.message)
+        proj = self.projection
         geotrans = self._gtr
         gtiffdr = gdal.GetDriverByName('GTiff')
         gtiff = gtiffdr.Create(newpath, self.ncol, self.nrow, bands, gdaltype)
@@ -463,7 +474,12 @@ class Hyperionscene(USGSL1scene):
     A container object for EO-1 Hyperion scenes. Input: directory name,
     which is expected to contain all scene files.
     """
-    
+    _hyperiondata = hyp.gethyperionbands()
+    band_is_calibrated = np.logical_not(_hyperiondata.Not_Calibrated_X == 'X')
+    hyperionbands = _hyperiondata.Hyperion_Band
+    calibratedbands = hyperionbands[band_is_calibrated]
+    hyperionwavelength_nm = _hyperiondata.Average_Wavelength_nm
+    calibratedwavelength_nm = _hyperiondata.Average_Wavelength_nm[band_is_calibrated]
     def __init__(self, dirname):
         super(Hyperionscene, self).__init__(dirname)
         self.permissiblebands = [str(num) for num in range(1, 243)]
@@ -503,6 +519,38 @@ class Hyperionscene(USGSL1scene):
             return self.bands[band]
         else:
             return object.__getattribute__(self, bandname)
+    
+    def spectrum(self, i_idx, j_idx, bands='calibrated'):
+        """
+        Calculates the radiance spectrum for one pixel.
+        
+        Arguments:
+          i_idx (int): first coordinate index of the pixel
+          j_idx (int): second coordinate index of the pixel
+          bands (str): indicates the bands that are used
+            'calibrated' (default): only use calibrated bands
+            'high': use uncalibrated bands 225-242
+            'low': use uncalibrated bands 1-7
+            'all': use all available bands            
+        """
+        rads = []
+        if bands == 'calibrated':
+            bd = self.hyperionbands[self.band_is_calibrated]
+        elif bands == 'all':
+            bd = self.hyperionbands
+        elif bands == 'high':
+            bd = self.hyperionbands[225:]
+        elif bands == 'low':
+            bd = self.hyperionbands[:8]
+        else:
+            raise PygaarstRasterError(
+                "Unrecognized argument %s for bands in raser.HyperionScene."
+            ) 
+        for band in bd:
+            dummy = self.__getattr__(band).radiance
+            rads.append(dummy[i_idx, j_idx])
+        del dummy
+        return rads
 
 class ALIscene(USGSL1scene):
     """
@@ -703,9 +751,10 @@ class Hyperionband(USGSL1band):
         if not self.meta:
             raise PygaarstRasterError("Impossible to retrieve metadata for band. No radiance calculation possible.")
         if int(self.band) <= 70:
-            return self.data / self.meta['RADIANCE_SCALING']['SCALING_FACTOR_VNIR']
+            rad = self.data / self.meta['RADIANCE_SCALING']['SCALING_FACTOR_VNIR']
         else:
-            return self.data / self.meta['RADIANCE_SCALING']['SCALING_FACTOR_SWIR']
+            rad = self.data / self.meta['RADIANCE_SCALING']['SCALING_FACTOR_SWIR']
+        return rad.astype('float32')
 
 class ALIband(USGSL1band):
     """
@@ -741,7 +790,7 @@ class HDF5(object):
             self.filepath = filepath
             self.dirname = os.path.dirname(filepath)
         except IOError as e:
-            LOGGER.error("Could not open %s: %s" % (filepath, e))
+            LOGGER.error("Could not open %s: %s" % (filepath, e.message))
             raise
         if not self.dataobj:
             raise PygaarstRasterError(
