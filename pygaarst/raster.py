@@ -474,14 +474,15 @@ class Hyperionscene(USGSL1scene):
     A container object for EO-1 Hyperion scenes. Input: directory name,
     which is expected to contain all scene files.
     """
-    _hyperiondata = hyp.gethyperionbands()
-    band_is_calibrated = np.logical_not(_hyperiondata.Not_Calibrated_X == 'X')
-    hyperionbands = _hyperiondata.Hyperion_Band
-    calibratedbands = hyperionbands[band_is_calibrated]
-    hyperionwavelength_nm = _hyperiondata.Average_Wavelength_nm
-    calibratedwavelength_nm = _hyperiondata.Average_Wavelength_nm[band_is_calibrated]
     def __init__(self, dirname):
         super(Hyperionscene, self).__init__(dirname)
+        self._hyperiondata = hyp.gethyperionbands()
+        self.band_is_calibrated = np.logical_not(self._hyperiondata.Not_Calibrated_X == 'X')
+        self.hyperionbands = self._hyperiondata.Hyperion_Band
+        self.calibratedbands = self.hyperionbands[self.band_is_calibrated]
+        self.hyperionwavelength_nm = self._hyperiondata.Average_Wavelength_nm
+        self.calibratedwavelength_nm = self._hyperiondata.Average_Wavelength_nm[self.band_is_calibrated]
+
         self.permissiblebands = [str(num) for num in range(1, 243)]
         self.calibratedbands = [str(num) for num in range(8, 58) + range(77, 225)]
         _validate_platformorigin('HYPERION', self.spacecraft, self.sensor)
