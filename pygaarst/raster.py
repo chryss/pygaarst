@@ -51,13 +51,13 @@ class PygaarstRasterError(Exception):
 # helper function
 def _test_outside(testx, lower, upper):
     """
-    True if testx, or any element of it is outside [lower, upper).
+    True if testx, or any element of it is outside [lower, upper].
     
-    Lower bound included, upper bound excluded. 
+    Both lower bound and upper bound included 
     Input: Integer or floating point scalar or Numpy array. 
     """
     test = np.array(testx)
-    return np.any(test < lower) or np.any(test >= upper)
+    return np.any(test < lower) or np.any(test > upper)
 
 class GeoTIFF(object):
     """
@@ -193,9 +193,12 @@ class GeoTIFF(object):
         Converts array index pair(s) to easting/northing coordinate pairs(s).
         
         NOTE: array coordinate origin is in the top left corner whereas 
-        easting/northing origin is in the bottom left corner. Easting and northing
-        are floating point numbers, and refer to the top-left corner coordinate of the 
-        pixel. i runs from 0 to nrow-1, j from 0 to ncol-1
+        easting/northing origin is in the bottom left corner. Easting and
+        northing are floating point numbers, and refer to the top-left corner 
+        coordinate of the pixel. i runs from 0 to nrow-1, j from 0 to ncol-1.
+        For i=nrow and j=ncol, the bottom-right corner coordinate of the
+        bottom-right pixel will be returned. This is identical to the bottom-
+        right corner.
         
         Arguments: 
             i (int): scalar or array of row coordinate index
@@ -206,33 +209,39 @@ class GeoTIFF(object):
             y (float): scalar or array of northing coordinates
         """
         if _test_outside(i, 0, self.nrow) or _test_outside(j, 0, self.ncol):
-            raise PygaarstRasterError("Coordinates %d, %d out of bounds" % (i, j))
+            raise PygaarstRasterError(
+                "Coordinates %d, %d out of bounds" % (i, j))
         x = self.easting[0] + j * self.delx
         y = self.northing[-1] + i * self.dely
         return x, y
     
-    def xy2ij(self, x, y):
+    def xy2ij(self, x, y, precise=False):
         """
-        Convert easting/northing coordinate pair(s) to array coordinate pairs(s).
+        Convert easting/northing coordinate pair(s) to array coordinate 
+        pairs(s).
         
         NOTE: see note at ij2xy()
 
         Arguments:
             x (float): scalar or array of easting coordinates
             y (float): scalar or array of northing coordinates
+            precise (bool): if true, return fractional array coordinates
             
         Returns:
-            i (int): scalar or array of row coordinate index
-            j (int): scalar or array of column coordinate index    
+            i (int, or float): scalar or array of row coordinate index
+            j (int, or float): scalar or array of column coordinate index    
         """
         if ( _test_outside(x, self.easting[0], self.easting[-1]) or
              _test_outside(y, self.northing[0], self.northing[-1])):
             raise PygaarstRasterError("Coordinates out of bounds")
-        i = np.floor((1 - (y  - self.northing[0])/(self.northing[-1] - \
-            self.northing[0])) * self.nrow)
-        j = np.floor((x - self.easting[0])/(self.easting[-1] - self.easting[0]) \
-            * self.ncol)
-        return i, j
+        i = (1 - (y  - self.northing[0])/(self.northing[-1] - 
+            self.northing[0])) * self.nrow
+        j = (x - self.easting[0])/(self.easting[-1] - 
+            self.easting[0]) * self.ncol
+        if precise:
+            return i, j
+        else:
+            return int(np.floor(i)), int(np.floor(j))
     
     def simpleplot(self):
         """Quick and dirty plot of each band (channel, dataset) in the image.
@@ -290,9 +299,12 @@ class GeoTIFF(object):
         else:
             raise PygaarstRasterError("New data array has only %s dimensions." % dims)
         try:
+            LOGGER.info(newdata.dtype.name)
+            LOGGER.info(NPDTYPE2GDALTYPECODE)
+            LOGGER.info(NPDTYPE2GDALTYPECODE[newdata.dtype.name])
             gdaltype = NPDTYPE2GDALTYPECODE[newdata.dtype.name]
         except KeyError as err:
-            raise PygaarstRasterError("Data type in array cannot be converted to GDAL data type: \n%s" % err.message)
+            raise PygaarstRasterError("Data type in array %s cannot be converted to GDAL data type: \n%s" % (newdata.dtype.name, err.message))
         proj = self.projection
         geotrans = self._gtr
         gtiffdr = gdal.GetDriverByName('GTiff')
@@ -478,6 +490,7 @@ class Hyperionscene(USGSL1scene):
         super(Hyperionscene, self).__init__(dirname)
         self._hyperiondata = hyp.gethyperionbands()
         self.band_is_calibrated = np.logical_not(self._hyperiondata.Not_Calibrated_X == 'X')
+        self.bandselection = []
         self.hyperionbands = self._hyperiondata.Hyperion_Band
         self.calibratedbands = self.hyperionbands[self.band_is_calibrated]
         self.hyperionwavelength_nm = self._hyperiondata.Average_Wavelength_nm
@@ -521,7 +534,9 @@ class Hyperionscene(USGSL1scene):
         else:
             return object.__getattribute__(self, bandname)
     
-    def spectrum(self, i_idx, j_idx, bands='calibrated'):
+    def spectrum(self, i_idx, j_idx, 
+            bands='calibrated', 
+            bdsel=[]):
         """
         Calculates the radiance spectrum for one pixel.
         
@@ -532,25 +547,31 @@ class Hyperionscene(USGSL1scene):
             'calibrated' (default): only use calibrated bands
             'high': use uncalibrated bands 225-242
             'low': use uncalibrated bands 1-7
-            'all': use all available bands            
+            'all': use all available bands
+            'selected': use bdsel attribute or argument
+          bdsel: sequence data type containing band indices to select
         """
         rads = []
         if bands == 'calibrated':
             bd = self.hyperionbands[self.band_is_calibrated]
+        elif bands == 'selected':
+            bd = self.hyperionbands[bdsel]
+            if bd.size == 0 and self.bandselection:
+                bd = self.hyperionbands[self.bandselection]
         elif bands == 'all':
             bd = self.hyperionbands
         elif bands == 'high':
-            bd = self.hyperionbands[225:]
+            bd = self.hyperionbands[224:]
         elif bands == 'low':
-            bd = self.hyperionbands[:8]
+            bd = self.hyperionbands[:7]
         else:
             raise PygaarstRasterError(
                 "Unrecognized argument %s for bands in raser.HyperionScene."
             ) 
         for band in bd:
-            dummy = self.__getattr__(band).radiance
-            rads.append(dummy[i_idx, j_idx])
-        del dummy
+            rd = self.__getattr__(band).radiance
+            rads.append(rd[i_idx, j_idx])
+        del rd
         return rads
 
 class ALIscene(USGSL1scene):
