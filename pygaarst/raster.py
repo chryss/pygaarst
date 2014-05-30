@@ -39,6 +39,7 @@ import pygaarst.landsatutils as lu
 import pygaarst.mtlutils as mtl
 import pygaarst.hyperionutils as hyp
 import pygaarst.irutils as ir
+import pygaarst.rasterhelpers as rh
 
 # GDAL doesn't by default use exceptions
 gdal.UseExceptions()
@@ -120,12 +121,14 @@ class GeoTIFF(object):
     
     @property
     def delx(self):
-        """The sampling distance in x-direction, in physical units (eg metres)"""
+        """The sampling distance in x-direction, in physical units 
+        (eg metres)"""
         return self._gtr[1]
     
     @property
     def dely(self):
-        """The sampling distance in y-direction, in physical units (eg metres)"""
+        """The sampling distance in y-direction, in physical units 
+        (eg metres). Negative in northern hemisphere."""
         return self._gtr[5]
     
     @property
@@ -133,24 +136,43 @@ class GeoTIFF(object):
         """The x-coordinates of first row pixel corners, 
         as a numpy array: upper-left corner of upper-left pixel 
         to upper-right corner of upper-right pixel (ncol+1)."""
-        return np.arange(self.ulx, self.lrx + self.delx, self.delx)
+        delta = np.abs(
+            (self.lrx-self.ulx)/self.ncol 
+            - self.delx
+            )
+        if delta > 10e-2:
+            LOGGER.warn("GeoTIFF issue: E-W grid step differs from deltaX by more than 1% ")
+        return np.linspace(self.ulx, self.lrx, self.ncol+1)
     
     @property
     def northing(self): 
         """The y-coordinates of first column pixel corners, 
-        as a numpy array: upper-left corner of upper-left pixel to 
-        lower-left corner of lower-left pixel (ncol+1)."""
-        return np.arange(self.lry, self.uly - self.dely, -self.dely)
+        as a numpy array: lower-left corner of lower-left pixel to
+        upper-left corner of upper-left pixel (nrow+1)."""
+        # check if data grid step is consistent
+        delta = np.abs(
+            (self.lry-self.uly)/self.nrow 
+            - self.dely
+            )
+        if delta > 10e-2:
+            LOGGER.warn("GeoTIFF issue: N-S grid step differs from deltaX by more than 1% ")
+        return np.linspace(self.lry, self.uly, self.nrow+1)
     
     @property
     def x_pxcenter(self): 
         """The x-coordinates of pixel centers, as a numpy array ncol."""
-        return np.arange(self.ulx + self.delx/2, self.lrx + self.delx/2, self.delx)
+        return np.linspace(
+            self.ulx + self.delx/2, 
+            self.lrx - self.delx/2, 
+            self.ncol)
     
     @property
     def y_pxcenter(self): 
         """y-coordinates of pixel centers, nrow."""
-        return np.arange(self.lry - self.dely/2, self.uly - self.dely/2, -self.dely)
+        return np.linspace(
+            self.lry - self.dely/2, 
+            self.uly + self.dely/2, 
+            self.nrow)
     
     @property
     def _XY(self):
@@ -370,7 +392,7 @@ class USGSL1scene(object):
         except AttributeError:
             LOGGER.critical("Error accessing bands %s and %s to calculate NBR." % (label1, label2))
             raise
-
+            
 class Landsatscene(USGSL1scene):
     """
     A container object for TM/ETM+ L5/7 and OLI/TIRS L8 scenes. Input: directory name,
@@ -385,7 +407,7 @@ class Landsatscene(USGSL1scene):
         except KeyError:
             versionstr = self.meta['PRODUCT_METADATA']['PROCESSING_SOFTWARE']
             self.newmetaformat = False
-        self.permissiblebands = lu.get_bands(self.spacecraft)
+        self.permissiblebandid = lu.get_bands(self.spacecraft)
         _validate_platformorigin('Landsat', self.spacecraft)
         
     def __getattr__(self, bandname):
@@ -399,12 +421,12 @@ class Landsatscene(USGSL1scene):
         try:
             band = tail.upper()
             if head == '':
-                if band in self.permissiblebands:
+                if band in self.permissiblebandid:
                     isband = True
                 else:
                     raise PygaarstRasterError(
                         "Spacecraft %s does not have a band %s. Permissible band labels are %s." %
-                         (self.spacecraft, band, ', '.join(self.permissiblebands)))
+                         (self.spacecraft, band, ', '.join(self.permissiblebandid)))
         except ValueError:
             pass
         if isband:
@@ -489,15 +511,16 @@ class Hyperionscene(USGSL1scene):
     def __init__(self, dirname):
         super(Hyperionscene, self).__init__(dirname)
         self._hyperiondata = hyp.gethyperionbands()
-        self.band_is_calibrated = np.logical_not(self._hyperiondata.Not_Calibrated_X == 'X')
+        self.band_is_calibrated = np.logical_not(
+            self._hyperiondata.Not_Calibrated_X == 'X')
         self.bandselection = []
         self.hyperionbands = self._hyperiondata.Hyperion_Band
         self.calibratedbands = self.hyperionbands[self.band_is_calibrated]
         self.hyperionwavelength_nm = self._hyperiondata.Average_Wavelength_nm
         self.calibratedwavelength_nm = self._hyperiondata.Average_Wavelength_nm[self.band_is_calibrated]
 
-        self.permissiblebands = [str(num) for num in range(1, 243)]
-        self.calibratedbands = [str(num) for num in range(8, 58) + range(77, 225)]
+        self.permissiblebandid = [str(num) for num in range(1, 243)]
+        self.calibratedbandid = [str(num) for num in range(8, 58) + range(77, 225)]
         _validate_platformorigin('HYPERION', self.spacecraft, self.sensor)
         
     def __getattr__(self, bandname):
@@ -514,9 +537,9 @@ class Hyperionscene(USGSL1scene):
         try:
             band = tail.upper()
             if head == '':
-                if band in self.permissiblebands:
+                if band in self.permissiblebandid:
                     isband = True
-                    if band not in self.calibratedbands:
+                    if band not in self.calibratedbandid:
                         LOGGER.warning('Hyperion band %s is not calibrated.' % band)
                 else:
                     raise PygaarstRasterError(
@@ -573,6 +596,46 @@ class Hyperionscene(USGSL1scene):
             rads.append(rd[i_idx, j_idx])
         del rd
         return rads
+        
+    def get_datacube(self, outfn, 
+        bandlist, islice=None, jslice=None, 
+        set_fh=False):
+        """
+        Creates a rasterhelpers.Datacube object from a bandlist and the 
+        radiance data from the whole Hyperion scene.
+        
+        Arguments:
+            outfn (str): file path of the HDF5 file that stores the cube
+            bandlist (sequence of str): a list or array of band names
+            islice (sequence of int): list or array of row indices
+            jslice (sequence of int): list or array of column indices
+            set_fh (bool): should an open filehandle be set as an argument?
+        """
+        if len(bandlist) == 0:
+            return None
+        sampleband = self.__getattr__(bandlist[0])
+        if not islice:
+            islice = range(sampleband.nrow)
+        if not jslice:
+            jsclice = range(sampleband.ncol)
+        revnorth = sampleband.northing[::-1]
+        east = sampleband.easting[...]
+        scenecube = rh.Datacube(
+                        outfn,
+                        self.hyperionbands[self.band_is_calibrated],
+                        east[jslice],
+                        revnorth[islice],
+                        proj4 = sampleband.proj4,
+                        set_fh = True
+                        )
+        for bidx, band in enumerate(bandlist):
+            banddata = self.__getattr__(band).radiance
+            scenecube.fh['data'][:,:, bidx] = banddata[
+                np.meshgrid(islice, jslice)
+                ]
+        if not set_fh:
+            scenecube.fh.close()
+        return scenecube
 
 class ALIscene(USGSL1scene):
     """
@@ -582,7 +645,7 @@ class ALIscene(USGSL1scene):
     
     def __init__(self, dirname):
         super(ALIscene, self).__init__(dirname)
-        self.permissiblebands = [str(num) for num in range(1, 11)]
+        self.permissiblebandid = [str(num) for num in range(1, 11)]
         _validate_platformorigin('ALI', self.spacecraft, self.sensor)
         
     def __getattr__(self, bandname):
@@ -599,7 +662,7 @@ class ALIscene(USGSL1scene):
         try:
             band = tail.upper()
             if head == '':
-                if band in self.permissiblebands:
+                if band in self.permissiblebandid:
                     isband = True
                 else:
                     raise PygaarstRasterError(

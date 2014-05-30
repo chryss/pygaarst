@@ -51,6 +51,57 @@ def save_hypspec_to_hdf5(outfn, hypsc, spectra, i_coord, j_coord):
             "bandwavelenght_nm", data=hypsc.calibratedwavelength_nm
             )
 
+class Datacube(object):
+    """
+    A 3D cube of data saved in a HDF5 file. 
+    Leaves data empty to be filled afterwards. 
+    
+    Arguments:
+        fn (str): file path of HDF5 file
+        bands (seq of str): list/array of band names 
+        easting (float): 1D np array of pixel corner x-coordinates, same
+            order as in array (usually, W-E)
+        northing (float): 1D np array of pixel corner y-coordinates, same
+            order as in array (usually, N-S)
+        lon (float): 1D array of pixel center longitudes, optional
+        lat (float): 1D array of pixel center latitudes, optional
+        proj4 (str): Proj4 string of projection, optional
+        rastertype (str): only 'grid' implemented. TODO: 'swath'
+        set_fh (bool): toggle if an open filehandle is returned as attribute
+    """
+    def __init__(self, fn, bands, 
+            easting, northing,
+            lon=None, lat=None,
+            proj4=None, rastertype='grid',            
+            set_fh=False):
+        self.filepath = fn
+        self.bands = bands
+        self.easting = easting 
+        self.northing = northing
+        self.lon = lon
+        self.lat = lat
+        self.proj4 = proj4
+        nbands = len(bands)
+        # number of x and y pixels the same pixel corner coords
+        # that is, we don't have the bottom-right (usually) coordinate,
+        # only the top-left coordinate of the bottom-right pixel
+        nx = len(easting)
+        ny = len(northing)
+        with h5py.File(fn, 'w') as fh:
+            fh.create_dataset('bandnames', data=bands)
+            fh.create_dataset('easting', data=easting)
+            fh.create_dataset('northing', data=northing)
+            fh.create_dataset('data', (ny, nx, nbands))
+            if lon:
+                fh.create_dataset('lon', data=lon)
+            if lat:
+                fh.create_dataset('lat', data=lat)
+            if proj4:
+                fh['data'].attrs['proj4'] = proj4
+            fh['data'].attrs['rastertype'] = rastertype
+        if set_fh:
+            self.fh = h5py.File(fn, 'r+')
+
 def main():
     pass
 
