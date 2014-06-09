@@ -15,6 +15,10 @@ provide a friendly API that makes common tasks on widely used data formats easy 
 
 The project was initiated on 2013-09-18 and in an early stage of development.
 
+**The documentation for this project can be found [on ReadTheDocs] [2].**
+
+  [2]: http://pygaarst.readthedocs.org/en/latest/
+
 Dependencies
 ------------
 
