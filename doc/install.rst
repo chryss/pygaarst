@@ -22,12 +22,12 @@ The following Python packages are prerequisites for optional functionality:
 - matplotlib (for plotting)
 - mpl_toolkits.basemap (for plotting on a map)
 - pytest (for unit tests)
+- fiona (for reading and processing GIS vector files)
+- shapely (for operations on vector data)
 
 Future functionality is expected to require the following packages:
 
 - netCDF4 (for reading and processing NetCDF files)
-- fiona (for reading and processing GIS vector files)
-- shapely (for operations on vector data)
 
 **Please note** that installing the prerequisites may, depending on your configuration, 
 require some thoughtful planning:

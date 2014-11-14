@@ -1,7 +1,12 @@
 __all__ = [
     "basemaputils",
-    "raster",
-    "vector",
+    "landsatutils",
+    "hyperionutils",
+    "geomutils",
+    "irutlis",
     "modapsclient",
-    "landsatutils"
+    "mtlutils",
+    "raster",
+    "rasterhelpers",
+    "vector",
     ]
