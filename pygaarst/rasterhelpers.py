@@ -58,7 +58,8 @@ class Datacube(object):
     
     Arguments:
         fn (str): file path of HDF5 file
-        bands (seq of str): list/array of band names 
+        bandnames (seq of str): list/array of band names 
+        bandwav (float): array of wavelengths in nm
         easting (float): 1D np array of pixel corner x-coordinates, same
             order as in array (usually, W-E)
         northing (float): 1D np array of pixel corner y-coordinates, same
@@ -69,36 +70,43 @@ class Datacube(object):
         rastertype (str): only 'grid' implemented. TODO: 'swath'
         set_fh (bool): toggle if an open filehandle is returned as attribute
     """
-    def __init__(self, fn, bands, 
+    def __init__(self, fn, bandnames, bandwav, 
             easting, northing,
             lon=None, lat=None,
             proj4=None, rastertype='grid',            
             set_fh=False):
         self.filepath = fn
-        self.bands = bands
+        self.bandnames = bandnames
+        self.wavelengths = bandwav
         self.easting = easting 
         self.northing = northing
         self.lon = lon
         self.lat = lat
         self.proj4 = proj4
-        nbands = len(bands)
+        nbands = len(bandnames)
         # number of x and y pixels the same pixel corner coords
         # that is, we don't have the bottom-right (usually) coordinate,
         # only the top-left coordinate of the bottom-right pixel
         nx = len(easting)
         ny = len(northing)
         with h5py.File(fn, 'w') as fh:
-            fh.create_dataset('bandnames', data=bands)
-            fh.create_dataset('easting', data=easting)
-            fh.create_dataset('northing', data=northing)
-            fh.create_dataset('data', (ny, nx, nbands))
+            fh.create_dataset(
+                'bandnames', data=bandnames)
+            fh.create_dataset(
+                'easting', data=easting, dtype=np.float32)
+            fh.create_dataset(
+                'northing', data=northing, dtype=np.float32)
+            fh.create_dataset(
+                'data', (nx, ny, nbands))
             if lon:
-                fh.create_dataset('lon', data=lon)
+                fh.create_dataset('lon', data=lon, dtype=np.float32)
             if lat:
-                fh.create_dataset('lat', data=lat)
+                fh.create_dataset('lat', data=lat, dtype=np.float32)
             if proj4:
                 fh['data'].attrs['proj4'] = proj4
             fh['data'].attrs['rastertype'] = rastertype
+            fh['data'].attrs['bandnames'] = bandnames
+            fh['data'].attrs['wavelengths'] = bandwav.astype(np.float32)
         if set_fh:
             self.fh = h5py.File(fn, 'r+')
 

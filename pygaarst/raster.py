@@ -340,6 +340,8 @@ class GeoTIFF(object):
                 gtiff.GetRasterBand(idx+1).WriteArray(newdata[idx, :, :])
         gtiff = None
         return GeoTIFF(newpath)
+        
+        
 
 # helper function
 def _get_spacecraftid(spid):
@@ -518,7 +520,6 @@ class Hyperionscene(USGSL1scene):
         self.calibratedbands = self.hyperionbands[self.band_is_calibrated]
         self.hyperionwavelength_nm = self._hyperiondata.Average_Wavelength_nm
         self.calibratedwavelength_nm = self._hyperiondata.Average_Wavelength_nm[self.band_is_calibrated]
-
         self.permissiblebandid = [str(num) for num in range(1, 243)]
         self.calibratedbandid = [str(num) for num in range(8, 58) + range(77, 225)]
         _validate_platformorigin('HYPERION', self.spacecraft, self.sensor)
@@ -617,12 +618,13 @@ class Hyperionscene(USGSL1scene):
         if not islice:
             islice = range(sampleband.nrow)
         if not jslice:
-            jsclice = range(sampleband.ncol)
+            jslice = range(sampleband.ncol)
         revnorth = sampleband.northing[::-1]
         east = sampleband.easting[...]
         scenecube = rh.Datacube(
                         outfn,
-                        self.hyperionbands[self.band_is_calibrated],
+                        self.calibratedbands,
+                        self.calibratedwavelength_nm,
                         east[jslice],
                         revnorth[islice],
                         proj4 = sampleband.proj4,
@@ -892,7 +894,7 @@ def _getlabel(groupname):
 
 class VIIRSHDF5(HDF5):
     """
-    A class providing access to a VIIRS HDF5 file or dataset
+    A class providing access to a VIIRS SDS HDF5 file or dataset
     Parameters:
     filepath: full or relative path to the data file
     geofilepath (optional): override georeference array file from
