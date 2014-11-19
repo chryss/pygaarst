@@ -1,12 +1,20 @@
+"""Python geospatial and remote sensing toolkit"""
+
 __all__ = [
+    "ali",
     "basemaputils",
-    "landsatutils",
-    "hyperionutils",
     "geomutils",
-    "irutlis",
+    "geotiff",
+    "hdf5",
+    "hyperion",
+    "hyperionutils",
+    "irutils",
+    "landsat",
+    "landsatutils",
     "modapsclient",
     "mtlutils",
     "raster",
     "rasterhelpers",
+    "usgsl1",
     "vector",
     ]
