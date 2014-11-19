@@ -5,27 +5,41 @@ pygaarst.rasterhelpers.py
 
 Helper functions (misc).
 Created by Chris Waigl on 2014-05-12.
-Copyright (c) 2014 Christine F. Waigl. 
+Copyright (c) 2014 Christine F. Waigl.
 """
 
-import sys
-import os, os.path
 import numpy as np
-import h5py
-
-try:
-    import h5py
-except ImportError:
-    LOGGER.warning("The h5py library couldn't be imported, so HDF5 files aren't supported")
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.rasterhelpers')
 
+try:
+    import h5py
+except ImportError:
+    LOGGER.warning(
+        "The h5py library couldn't be imported: HDF5 files aren't supported")
+
+# custom exception
+class PygaarstRasterError(Exception):
+    """Custom exception for errors during raster processing in Pygaarst"""
+    pass
+
+# helper function
+def _test_outside(testx, lower, upper):
+    """
+    True if testx, or any element of it is outside [lower, upper].
+
+    Both lower bound and upper bound included
+    Input: Integer or floating point scalar or Numpy array.
+    """
+    test = np.array(testx)
+    return np.any(test < lower) or np.any(test > upper)
+
 def save_hypspec_to_hdf5(outfn, hypsc, spectra, i_coord, j_coord):
     """
     Save a set of spectra to HDF5
-    
+
     Arguments:
       outfn (str): file path of the HDF5 file. Will overwrite.
       usgssc (USGSscene): The (typically) Hyperion scene from which the
@@ -40,11 +54,11 @@ def save_hypspec_to_hdf5(outfn, hypsc, spectra, i_coord, j_coord):
         colidx = fh.create_dataset("j_col_idx", data=j_coord)
         spec = fh.create_dataset("spectrum", data=spectra)
         bandnames = fh.create_dataset(
-            "bandname", 
+            "bandname",
             data=hypsc.hyperionbands[hypsc.band_is_calibrated]
             )
         bandidx = fh.create_dataset(
-            "bandindex", 
+            "bandindex",
             data=np.where(hypsc.band_is_calibrated)[0]
             )
         bandwavelength = fh.create_dataset(
@@ -53,12 +67,12 @@ def save_hypspec_to_hdf5(outfn, hypsc, spectra, i_coord, j_coord):
 
 class Datacube(object):
     """
-    A 3D cube of data saved in a HDF5 file. 
-    Leaves data empty to be filled afterwards. 
-    
+    A 3D cube of data saved in a HDF5 file.
+    Leaves data empty to be filled afterwards.
+
     Arguments:
         fn (str): file path of HDF5 file
-        bandnames (seq of str): list/array of band names 
+        bandnames (seq of str): list/array of band names
         bandwav (float): array of wavelengths in nm
         easting (float): 1D np array of pixel corner x-coordinates, same
             order as in array (usually, W-E)
@@ -70,15 +84,16 @@ class Datacube(object):
         rastertype (str): only 'grid' implemented. TODO: 'swath'
         set_fh (bool): toggle if an open filehandle is returned as attribute
     """
-    def __init__(self, fn, bandnames, bandwav, 
+    def __init__(
+            self, fn, bandnames, bandwav,
             easting, northing,
             lon=None, lat=None,
-            proj4=None, rastertype='grid',            
+            proj4=None, rastertype='grid',
             set_fh=False):
         self.filepath = fn
         self.bandnames = bandnames
         self.wavelengths = bandwav
-        self.easting = easting 
+        self.easting = easting
         self.northing = northing
         self.lon = lon
         self.lat = lat
@@ -111,8 +126,8 @@ class Datacube(object):
             self.fh = h5py.File(fn, 'r+')
 
 def main():
+    """Um..."""
     pass
-
 
 if __name__ == '__main__':
     main()

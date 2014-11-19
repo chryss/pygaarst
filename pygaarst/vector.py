@@ -8,13 +8,11 @@ Classes and methods to handle vector file formats.
 Created by Chris Waigl on 2013-10-28.
 """
 
-import os, os.path
-import numpy as np
+from __future__ import division, print_function
 
 from osgeo import gdal, ogr
 from osgeo import osr
 from pyproj import Proj
-from netCDF4 import Dataset as netCDF
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -29,27 +27,30 @@ class Shapefile(object):
     Parameters:
     filepath: full or relative path to the data file
     """
-    
+
     def __init__(self, filepath):
         try:
             logging.info("Opening %s" % filepath)
             self.dataobj = ogr.Open(filepath)
-        except RuntimeError as e: 
+        except RuntimeError as e:
             logging.error("Could not open %s: %s" % (filepath, e))
             raise
         self.numlayers = self.dataobj.GetLayerCount()
         if self.numlayers == 0:
             logging.error("No layers in shapefile %s" % filepath)
         elif self.numlayers > 1:
-            logging.warning("More than one data layer in shapefile %s. Only using the first one." % filepath)
+            logging.warning(
+                "More than one data layer in shapefile %s. " % filepath
+                + "Only using the first one.")
         self.layer = self.dataobj.GetLayer(0)
 
     @property
     def data(self):
+        """A list of featurs"""
         return [feature for feature in self.layer]
-        
+
     @property
     def proj4(self):
+        """Spatial reference as PROJ4 string"""
         spref = self.layer.GetSpatialRef()
         return spref.ExportToProj4
-    

@@ -8,7 +8,7 @@ Created by Chris Waigl on 2013-11-10.
 
 import os, os.path
 import pytest
-from pygaarst import landsatutils as l
+from pygaarst import mtlutils as mtl
 
 def setup_module(module):
     mydir = os.getcwd()
@@ -25,23 +25,23 @@ def test_file():
         assert a
 
 def test_read_metadata_L8():
-    meta = l.parsemeta(datapaths[0])
+    meta = mtl.parsemeta(datapaths[0])
     assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['SPACECRAFT_ID']  == 'LANDSAT_8'
     assert meta['L1_METADATA_FILE']['METADATA_FILE_INFO']['PROCESSING_SOFTWARE_VERSION'] == 'LPGS_2.2.2'
 
 
 def test_read_metadata_L7():
-    meta = l.parsemeta(datapaths[1])
+    meta = mtl.parsemeta(datapaths[1])
     assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['SPACECRAFT_ID']  == 'LANDSAT_7'
     assert meta['L1_METADATA_FILE']['METADATA_FILE_INFO']['PROCESSING_SOFTWARE_VERSION'] == 'LPGS_12.2.1'
 
 def test_read_metadata_L51():
-    meta = l.parsemeta(datapaths[2])
+    meta = mtl.parsemeta(datapaths[2])
     assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['SPACECRAFT_ID']  == 'LANDSAT_5'
     assert meta['L1_METADATA_FILE']['METADATA_FILE_INFO']['PROCESSING_SOFTWARE_VERSION'] == 'LPGS_12.2.1'
 
 def test_read_metadata_L52():
-    meta = l.parsemeta(datapaths[3])
+    meta = mtl.parsemeta(datapaths[3])
     assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['SPACECRAFT_ID']  == 'Landsat5'
     assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['PROCESSING_SOFTWARE'] == 'LPGS_11.5.1'
 

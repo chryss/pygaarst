@@ -1,25 +1,25 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-pygaarst.modapsclient
+**Module pygaarst.modapsclient**
 
-Created by Chris Waigl on 2013-10-22.
+**A client to do talk to MODAPS web services.
+See http://ladsweb.nascom.nasa.gov/data/web_services.html**
 
-A client to do talk to MODAPS web services.
-See http://ladsweb.nascom.nasa.gov/data/web_services.html
+*Created by Chris Waigl on 2013-10-22.*
 """
 
 from __future__ import division, print_function
 
 import sys
-import os
-import unittest
 import urllib, urllib2
 from xml.dom import minidom
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.modapsclient')
+
+MODAPSBASEURL = u"http://modwebsrv.modaps.eosdis.nasa.gov/axis2/services/MODAPSservices"
 
 def _parsekeyvals(domobj, containerstr, keystr, valstr):
     """Parses what's basically a keys-values structrue in a list of container
@@ -37,7 +37,7 @@ def _parsekeyvals(domobj, containerstr, keystr, valstr):
             elif child.tagName == valstr:
                 value = child.firstChild.data
         if key and value:
-           output[key] = value
+            output[key] = value
     return output
 
 def _parselist(domobj, containerstr):
@@ -54,7 +54,8 @@ def _parselist(domobj, containerstr):
 def _parselistofdicts(domobj, containerstr, prefix, listofkeys):
     """Parses what's basically a list of dictionaries contained in a container
     elements of the form
-    <container><prefix:key1>VAL1</prefix:key1><prefix:key2>...</prefix:key2>...</container>
+    <container><prefix:key1>VAL1</prefix:key1><prefix:key2>...
+    </prefix:key2>...</container>
     and returns it as a list of dictionaries"""
     output = []
     nodelist = domobj.getElementsByTagName(containerstr)
@@ -67,9 +68,11 @@ def _parselistofdicts(domobj, containerstr, prefix, listofkeys):
                 item[key] = child.firstChild.data
         output.append(item)
     return output
-    
+
 def _startswithax(item):
-    """Helper function to filter tag lists for those starting with the xmlns:ax string"""
+    """
+    Helper function to filter tag lists for starting with xmlns:ax
+    """
     return item.startswith('xmlns:ax')
 
 class ModapsClient(object):
@@ -81,12 +84,14 @@ class ModapsClient(object):
     """
 
     def __init__(self):
-        self.baseurl = u"http://modwebsrv.modaps.eosdis.nasa.gov/axis2/services/MODAPSservices"
+        self.baseurl = MODAPSBASEURL
         self.headers = {
             u'User-Agent': u'satellite RS data fetcher'
             }
 
-    def _parsedresponse(self, path, argdict, parserfun, data=None, unstabletags=False):
+    def _parsedresponse(self, path, argdict, parserfun,
+                        data=None, unstabletags=False):
+        """Returns response based on request and parser function"""
         url = self.baseurl + path
         if data:
             querydata = urllib.urlencode(data)
@@ -95,20 +100,24 @@ class ModapsClient(object):
             request = urllib2.Request(url, headers=self.headers)
         try:
             response = urllib2.urlopen(request).read()
-        except urllib2.HTTPError as e:
-            logging.critical("Error opening URL: %s" % e)
+        except urllib2.HTTPError as err:
+            logging.critical("Error opening URL: %s" % err)
             logging.critical("URL is %s" % url)
-            if data: logging.critical("Query string is %s" % querydata)
+            if data:
+                logging.critical("Query string is %s" % querydata)
             sys.exit(1)
         xmldoc = minidom.parseString(response)
         if unstabletags:
             attr = xmldoc.documentElement.attributes.items()
             pref = filter(_startswithax, [item[0] for item in attr])
             if not pref:
-                LOGGER.error("No valid namespace prefix found for request %s ." % url)
+                LOGGER.error(
+                    "No valid namespace prefix found for request %s ." % url)
                 sys.exit(1)
             elif len(pref) > 1:
-                LOGGER.error("Too many potential namespace prefix found for request %s. Using %s." % (url, pref[0]))
+                LOGGER.error(
+                    "Too many potential namespace prefix found for "
+                    + "request %s. Using %s." % (url, pref[0]))
             else:
                 prefix = pref[0][6:] + ':'
                 for item in argdict:
@@ -117,9 +126,11 @@ class ModapsClient(object):
         return parserfun(xmldoc, **argdict)
 
     def getAllOrders(self, email):
+        """All orders for an email address"""
         pass
 
     def getBands(self, product):
+        """Available bands for a product"""
         path = u'/getBands'
         parser = _parsekeyvals
         argdict = {}
@@ -145,6 +156,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, data=data)
 
     def getCollections(self, product):
+        """Available collections for a product"""
         path = u'/getCollections'
         parser = _parsekeyvals
         argdict = {}
@@ -156,6 +168,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, data=data)
 
     def getDataLayers(self, product):
+        """Available data layers for a product"""
         path = u'/getDataLayers'
         parser = _parsekeyvals
         argdict = {}
@@ -167,7 +180,9 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, data=data)
 
     def getDateCoverage(self, collection, product):
-        '''TODO: add some result postprocessing - not a good format '''
+        '''Available dates for a collection/product combination
+
+        TODO: add some result postprocessing - not a good format'''
         path = u'/getDateCoverage'
         parser = _parselist
         argdict = {}
@@ -191,7 +206,6 @@ class ModapsClient(object):
         data[u'fileIds'] = fileIds
         return self._parsedresponse(path, argdict, parser, data=data)
 
-
     def getFileProperties(self, fileIds):
         """fileIds is a comma-separated list of file-IDs"""
         path = u'/getFileProperties'
@@ -200,8 +214,8 @@ class ModapsClient(object):
         argdict[u'containerstr'] = u'return'
         argdict[u'prefix'] = u'mws:'
         argdict[u'listofkeys'] = [
-            u'fileID', u'fileName', u'checksum', u'fileSizeBytes', u'fileType',
-            u'ingestTime', u'online', u'startTime'
+            u'fileID', u'fileName', u'checksum', u'fileSizeBytes',
+            u'fileType', u'ingestTime', u'online', u'startTime'
             ]
         data = {}
         data[u'fileIds'] = fileIds
@@ -218,20 +232,23 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, data=data)
 
     def getMaxSearchResults(self):
+        """Max number of search results that can be returned"""
         path = u'/getMaxSearchResults'
         parser = _parselist
         argdict = {}
         argdict[u'containerstr'] = u'ns:return'
         return self._parsedresponse(path, argdict, parser)
 
-    def getOrderStatus(self,  OrderID ):
+    def getOrderStatus(self, OrderID):
+        """Order status for an order ID. TODO: implement"""
         pass
 
-    def getOrderUrl(self,  OrderID ):
+    def getOrderUrl(self, OrderID):
+        """Order URL(?) for order ID. TODO: implement"""
         pass
 
     def getPostProcessingTypes(self, products):
-        '''products: comma-concatenated string of valid product labels'''
+        '''Products: comma-concatenated string of valid product labels'''
         path = u'/getPostProcessingTypes'
         parser = _parselist
         argdict = {}
@@ -241,7 +258,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, data=data)
 
     def listCollections(self):
-        """Deprecated. Use getCollections (not implemented yet)"""
+        """Lists all collections. Deprecated: use getCollections"""
         path = u'/listCollections'
         parser = _parsekeyvals
         argdict = {}
@@ -251,6 +268,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, unstabletags=True)
 
     def listMapProjections(self):
+        """Lists all available map projections"""
         path = u'/listMapProjections'
         parser = _parsekeyvals
         argdict = {}
@@ -260,6 +278,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, unstabletags=True)
 
     def listProductGroups(self, instrument):
+        """Lists all available product groups"""
         path = u'/listProductGroups'
         parser = _parsekeyvals
         argdict = {}
@@ -271,6 +290,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, data=data)
 
     def listProducts(self):
+        """Lists all available products"""
         path = u'/listProducts'
         parser = _parsekeyvals
         argdict = {}
@@ -280,6 +300,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser)
 
     def listProductsByInstrument(self, instrument, group=None):
+        """Lists all available products for an instrument"""
         path = u'/listProductsByInstrument'
         parser = _parselist
         argdict = {}
@@ -291,6 +312,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, data=data)
 
     def listReprojectionParameters(self, reprojectionName):
+        """Lists reprojection parameters for a reprojection"""
         path = u'/listReprojectionParameters'
         parser = _parselistofdicts
         argdict = {}
@@ -304,6 +326,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, data=data)
 
     def listSatelliteInstruments(self):
+        """Lists all available satellite instruments"""
         path = u'/listSatelliteInstruments'
         parser = _parsekeyvals
         argdict = {}
@@ -312,10 +335,16 @@ class ModapsClient(object):
         argdict[u'valstr'] = u'value'
         return self._parsedresponse(path, argdict, parser, unstabletags=True)
 
-    def orderFiles(self,  FileIDs ):
+    def orderFiles(self, FileIDs):
+        """Submits an order. TODO: implement"""
         pass
 
-    def searchForFiles(self, products, startTime, endTime, north, south, east, west, coordsOrTiles=u'coords', dayNightBoth=u'DNB', collection=5 ):
+    def searchForFiles(
+            self, products, startTime, endTime,
+            north, south, east, west,
+            coordsOrTiles=u'coords',
+            dayNightBoth=u'DNB', collection=5):
+        """Submits a search based on product, geography and time"""
         path = u'/searchForFiles'
         parser = _parselist
         argdict = {}
@@ -336,6 +365,7 @@ class ModapsClient(object):
         return self._parsedresponse(path, argdict, parser, data=data)
 
     def searchForFilesByName(self, collection, pattern):
+        """Submits a search based on a file name pattern"""
         path = u'/searchForFilesByName'
         parser = _parselist
         argdict = {}

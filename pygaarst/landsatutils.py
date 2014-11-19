@@ -9,9 +9,6 @@ Created by Chris Waigl on 2013-11-13.
 
 from __future__ import division
 
-import os.path, glob
-import datetime
-import re
 import numpy as np
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -29,16 +26,21 @@ LANDSATBANDS = {
 }
 
 def get_bands(spacecraftid):
+    """Returns labels for bands for a given Landsat spacecraft L4 to L8"""
     try:
         return LANDSATBANDS[spacecraftid]
     except KeyError:
-        logging.error("Band labels are available for TM, ETM+ and OLI/TIR sensors on %s." % ', '.join(LANDSATBANDS.keys()))
+        logging.error(
+            "Band labels are available for TM, ETM+ "
+            + "and OLI/TIR sensors on %s." % ', '.join(LANDSATBANDS.keys()))
 
 def lskeyselect(isnew, keystr):
     """
-    Translates key strings from old to new metadata format, dependent on self.newmetaformat
-    (Boolean). See http://landsat.usgs.gov/Landsat_Metadata_Changes.php for changes in August 2012.\
-        Only implemented for keys that are used in this module.
+    Translates key strings from old to new metadata format,
+    dependent on self.newmetaformat (Boolean).
+
+    See http://landsat.usgs.gov/Landsat_Metadata_Changes.php for changes
+    in August 2012. Only implemented for keys that are used in this module.
     """
     new2old = {
         'DATE_ACQUIRED': 'ACQUISITION_DATE'
@@ -47,7 +49,9 @@ def lskeyselect(isnew, keystr):
         try:
             return new2old[keystr]
         except KeyError:
-            logging.warning("Key %s might not be valid for old-style metadata files." % keystr)
+            logging.warning(
+                "Key %s might not be valid for old-style metadata files."
+                % keystr)
     else:
         return keystr
 
@@ -76,6 +80,7 @@ K1_L7_EMTplus = 666.09
 K2_L7_EMTplus = 1282.71
 
 def getKconstants(spacecraftid):
+    """Returns K1 and K2 constants for TIR conversion"""
     if spacecraftid == 'L4':
         return K1_L4_TM, K2_L4_TM
     elif spacecraftid == 'L5':
@@ -83,7 +88,9 @@ def getKconstants(spacecraftid):
     elif spacecraftid == 'L7':
         return K1_L7_EMTplus, K2_L7_EMTplus
     else:
-        logging.warning('SpacecraftID not in L4, L5, L7. Check metadata or spacecraftID. Or both.')
+        logging.warning(
+            "SpacecraftID not in L4, L5, L7."
+            + "Check metadata or spacecraftID. Or both.")
 
 TIR_BANDS = {
     'L4': 'band6',
@@ -93,6 +100,7 @@ TIR_BANDS = {
     }
 
 def getTIRlabel(spacecraftid, gain='H', l8pref='10'):
+    """Returns suitable label for TIR band used by default"""
     bnd = TIR_BANDS[spacecraftid]
     if spacecraftid == 'L7':
         bnd += gain.upper()
@@ -105,8 +113,8 @@ def getTIRlabel(spacecraftid, gain='H', l8pref='10'):
 # =============================
 # Currently only L5, L7, L8
 
-
-# Earth-sun distance, see http://landsathandbook.gsfc.nasa.gov/data_prod/prog_sect11_3.html
+# Earth-sun distance, see
+# http://landsathandbook.gsfc.nasa.gov/data_prod/prog_sect11_3.html
 # as a function of julian day
 
 DISTEARTHSUN = {
@@ -500,9 +508,11 @@ ESUN = {
 }
 
 def getd(julianday):
+    """Returns distance Earth-Sun for a Julian day"""
     return DISTEARTHSUN[julianday]
 
 def getesun(spacecraft, band):
+    """Returns solar exoatmospheric spectral irradiances (ESUN)"""
     return ESUN[spacecraft][band]
 
 # =========================================
@@ -523,38 +533,51 @@ NBR_BANDS = {
     'L8': ('band5', 'band7'),
     }
 
-
-
 # ========================================
 # = Cloud masking algorithms for Landsat =
 # ========================================
 
-def naivethermal(tirband, tb=280.):
-    """Takes LandsatBand object, must be TIR to make sense. Returns numpy array"""
+def naivethermal(tirband, tbright=280.):
+    """
+    Takes LandsatBand object, must be TIR to make sense. Returns numpy array
+    """
     out = np.zeros(tirband.data.shape)
-    out[tirband.tKelvin < tb] = 1.
+    out[tirband.tKelvin < tbright] = 1.
     return out
-    
-def LTKcloud(lsscene):
+
+def LTKcloud(lsc):
     """Luo–Trishchenko–Khlopenkov"""
-    if lsscene.spacecraft == 'L8':
-        d1, d3, d4, d5 = lsscene.band2.reflectance, lsscene.band4.reflectance, lsscene.band5.reflectance, lsscene.band6.reflectance
+    if lsc.spacecraft == 'L8':
+        d1, d3 = lsc.band2.reflectance, lsc.band4.reflectance
+        d4, d5 = lsc.band5.reflectance, lsc.band6.reflectance
     else:
-        d1, d3, d4, d5 = lsscene.band1.reflectance, lsscene.band3.reflectance, lsscene.band4.reflectance, lsscene.band5.reflectance
-    
+        d1, d3 = lsc.band1.reflectance, lsc.band3.reflectance
+        d4, d5 = lsc.band4.reflectance, lsc.band5.reflectance
+
     # calculate masks
-    dummy1 = np.logical_and(d1<d3, np.logical_and(d3<d4, np.logical_and(d4<d5*1.07, d5 < 0.65)))
-    dummy2 = np.logical_and(d1*0.8<d3, np.logical_and(d3<d4*0.8, np.logical_and(d4<d5, d3<0.22)))
+    dummy1 = np.logical_and(
+        d1 < d3, np.logical_and(
+        d3 < d4, np.logical_and(d4 < d5 * 1.07, d5 < 0.65)))
+    dummy2 = np.logical_and(
+        d1 * 0.8 < d3, np.logical_and(
+        d3 < d4 * 0.8, np.logical_and(d4 < d5, d3 < 0.22)))
     mask_bareland = np.logical_or(dummy1, dummy2)
-    dummy3 = np.logical_and(d3>0.24, np.logical_and(d5<0.16, d3>d4))
-    dummy4 = np.logical_and(0.24>d3, np.logical_and(d3>0.18, np.logical_and(d5<d3-0.08, d3>d4)))
+    dummy3 = np.logical_and(
+        d3 > 0.24, np.logical_and(d5 < 0.16, d3 > d4))
+    dummy4 = np.logical_and(
+        0.24 > d3, np.logical_and(
+        d3 > 0.18, np.logical_and(d5 < d3 - 0.08, d3 > d4)))
     mask_ice = np.logical_or(dummy3, dummy4)
-    dummy5 = np.logical_and(d3>d4, np.logical_and(d3>d5*0.67, np.logical_and(d1<0.3, d3<0.2)))
-    dummy6 = np.logical_and(d3>d4*0.8, np.logical_and(d3>d5*0.67, d3<0.06))
+    dummy5 = np.logical_and(
+        d3 > d4, np.logical_and(
+        d3 > d5 * 0.67, np.logical_and(d1 < 0.3, d3 < 0.2)))
+    dummy6 = np.logical_and(
+        d3 > d4 * 0.8, np.logical_and(d3 > d5 * 0.67, d3 < 0.06))
     mask_water = np.logical_or(dummy5, dummy6)
-    dummy7 = np.logical_or(d1>0.2, d3>0.18)
-    mask_cloud = np.logical_and(dummy7, np.logical_and(d5 > 0.16, np.maximum(d1, d3) > d5*0.67))
-    
+    dummy7 = np.logical_or(d1 > 0.2, d3 > 0.18)
+    mask_cloud = np.logical_and(
+        dummy7, np.logical_and(d5 > 0.16, np.maximum(d1, d3) > d5 * 0.67))
+
     # apply masks to array
     out = np.zeros(d1.shape)
     out[mask_bareland] = 1.
@@ -568,5 +591,5 @@ def LTKcloud(lsscene):
     out[nextmask] = 4.
     union = np.logical_or(union, mask_cloud)
     out[~union] = 5.
-    
+
     return out

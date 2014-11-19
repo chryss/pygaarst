@@ -11,27 +11,27 @@ import numpy as np
 
 def gethyperionbands():
     """
-    Load Hyperion spectral band values into Numpy structured array. 
+    Load Hyperion spectral band values into Numpy structured array.
     Source: http://eo1.usgs.gov/sensors/hyperioncoverage
     """
     this_dir, this_filename = os.path.split(__file__)
     tabfile = os.path.join(this_dir, 'Hyperion_Spectral_coverage.tab')
     converter = lambda x: x.replace('B', 'band')
     return np.recfromtxt(
-        tabfile, 
+        tabfile,
         delimiter='\t',
-        skip_header=1, 
+        skip_header=1,
         names=True,
         converters={0: converter}
         )
-        
+
 def find_nearest_hyp(wavelength):
     """
     Returns index and wavelength of Hyperion band closest to input wavelength
-    
+
     Arguments:
       wavelength (float): wavelength in nm
-      
+
     Returns:
       idx (int): band index of closest band, starting at 0
       band (str): band name of closest band, starting at 'band1'

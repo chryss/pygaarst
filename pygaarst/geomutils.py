@@ -2,33 +2,34 @@
 """
 pygaarst.geomutils
 
-Utility functions for operations associating geometry objects with rasters. 
+Utility functions for operations associating geometry objects with rasters.
 In its simplest form, presumes shapely objects and numpy 2D arrays.
 
 Created by Chris Waigl on 2014-08-27.
 """
 
 from __future__ import division, print_function
-import collections as col
 import numpy as np
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger('pygaarst.geomutils')
+
 try:
     from shapely.geometry import Point
 except ImportError:
     LOGGER.warning(
         "The shapely library couldn't be imported, so geomutils won't work."
         )
-import logging
-logging.basicConfig(level=logging.DEBUG)
-LOGGER = logging.getLogger('pygaarst.geomutils')
 
-
-# We want to be able to cache results when looping through the 
+# We want to be able to cache results when looping through the
 # points of numpy arrays
-    
-class cachable(object):
-    def __init__(self, f):
+
+class Memoize(object):
+    """Memoization class for in-polygon test"""
+    def __init__(self, func):
         """Initialize function and cache attribute"""
-        self.f = f
+        self.func = func
         self.cache = set([])
     def __call__(self, *args, **kwargs):
         """To use the object to wrap a function, implement caching,
@@ -36,7 +37,7 @@ class cachable(object):
         if args in self.cache:
             return 1
         else:
-            value = self.f(*args, **kwargs)
+            value = self.func(*args, **kwargs)
             if value == 1:
                 self.cache.add(args)
             return value
@@ -51,36 +52,42 @@ class cachable(object):
         """Return the function's docstring"""
         return self.func.__doc__
     def resetcache(self):
+        """Reset the cache to empty."""
         self.cache = set([])
 
 def _getpolybounds(arrayshape, polygon):
+    """Returns bounds of shapely polygon or array, as int in pixel"""
     jmin, imin, jmax, imax = polygon.bounds
     imin = int(polygon.bounds[1])
     jmin = int(polygon.bounds[0])
     imax = int(np.minimum(polygon.bounds[3], arrayshape[0]))
     jmax = int(np.minimum(polygon.bounds[2], arrayshape[1]))
     return imin, jmin, imax, jmax
-    
+
 def _overlaypoly(arrayshape, poly=None):
+    """Returns mask raster, 1 for pixels in polygon, 0 otherwise"""
     mask = np.zeros(arrayshape, dtype=int)
     imin, jmin, imax, jmax = _getpolybounds(arrayshape, poly)
     for i in range(imin, imax+1):
-            for j in range(jmin, jmax+1):
-                mask[i, j] = _isinpoly(i, j, poly=poly)
+        for j in range(jmin, jmax+1):
+            mask[i, j] = _isinpoly(i, j, poly=poly)
     return mask
 
-@cachable
+@Memoize
 def _isinpoly(i, j, poly=None):
+    "Check if point is inside polygon. Shapely objects."
     if poly.contains(Point(j, i)):
         return 1
     return 0
 
 def overlayvectors(twoDarray, polygons):
     """
+    Calculates a mask array marking the pixels that are inside the polygon.
+
     Arguments:
       twoDarray: a 2D numpy array
       polygons: either a shapely multipolygon or a polygon object
-      
+
     Returns:
       array of same dimensions as twoDarray that has 1 for the points within
       the polygons object and 0 otherwise
@@ -91,9 +98,9 @@ def overlayvectors(twoDarray, polygons):
     mask = np.zeros(twoDarray.shape, dtype=int)
     _isinpoly.resetcache()
     for poly in polygons:
-        # Calculat a mask for the polygon: array with 1 for pts within 
+        # Calculat a mask for the polygon: array with 1 for pts within
         # the polygon, and 0 outside
-        polymask = _overlaypoly(twoDarray.shape, poly=poly)       
+        polymask = _overlaypoly(twoDarray.shape, poly=poly)
         mask = np.maximum(polymask, mask)
     #_isinpoly.cache = {}
     return mask
