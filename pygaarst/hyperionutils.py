@@ -15,7 +15,7 @@ def gethyperionbands():
     Source: http://eo1.usgs.gov/sensors/hyperioncoverage
     """
     this_dir, this_filename = os.path.split(__file__)
-    tabfile = os.path.join(this_dir, 'Hyperion_Spectral_coverage.tab')
+    tabfile = os.path.join(this_dir, 'data', 'Hyperion_Spectral_coverage.tab')
     converter = lambda x: x.replace('B', 'band')
     return np.recfromtxt(
         tabfile,
