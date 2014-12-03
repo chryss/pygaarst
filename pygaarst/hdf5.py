@@ -1,6 +1,6 @@
 # coding: utf-8
 """
-**pygaarst.landsat**
+**pygaarst.hdf5**
 
 **HDF5-specific classes, including for VIIRS SDS data.**
 
@@ -39,7 +39,7 @@ class HDF5(object):
     """
     def __init__(self, filepath):
         try:
-            LOGGER.info("Opening %s" % filepath)
+            #LOGGER.info("Opening %s" % filepath)
             self.dataobj = h5py.File(filepath, "r")
             self.filepath = filepath
             self.dirname = os.path.dirname(filepath)
@@ -54,7 +54,6 @@ class HDF5(object):
 def _getlabel(groupname):
     """Returns a useful group label for HDF5 datasets from VIIRS"""
     labelelems = groupname.split('-')
-    print(labelelems)
     if labelelems[-1].startswith(u'GEO'):
         return u'GEO'
     else:
