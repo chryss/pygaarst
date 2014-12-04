@@ -1,12 +1,13 @@
-GDAL
+# all raster
 numpy
-h5py
+GDAL
 pyproj
-# probably:
+# VIIRS or other HDF5
+h5py
+# MODIS or other HDF4
+python-hdf4
+# vector overlays
+shapely
+fiona
+# future:
 # netCDF4
-# shapely
-# fiona
-# recommended:
-# matplotlib
-# scipy
-# mpl_toolkits.basemap

@@ -22,13 +22,37 @@ The project was initiated on 2013-09-18 and in an early stage of development.
 Dependencies
 ------------
 
+**NOTE:** Most of the dependencies require the isntallation of C (or even 
+Fortran) libraries beforehand. 
+
+Pygaarst requires Python 2.7. Python 3(>=3.3) is planned. 
+
+For all raster handling:
+
+* numpy
 * GDAL for gdal, ogr and osr
 * pyproj
-* numpy,
+
+For HDF5 rasters (such as VIIRS):
+
+* h5py
+
+For HDF4 rasters (such as MODIS, ASTER)
+
+* python-hdf4
+
+For vector overlays:
+
+* Shapely
+* Fiona
+
+Future probably: 
+
+* netCDF4
+
+For plotting and mapping:
+
 * matplotlib and mpl_toolkits.basemap for `pygaarst.basemaputils`
-* netCDF4 and h5py -- for netCDF and HDF5
-* [future] shapely, fiona, descartes 
-* [future] most likely an XML parser of some sort 
 
 Documentation is also still in the very early stages of development.
 
@@ -79,8 +103,6 @@ Implements the methods from http://ladsweb.nascom.nasa.gov/data/api.html , excep
 * `searchDatasets`  
 * x `searchForFiles`  
 * x `searchForFilesByName`  
-
-TODO: ordering
 
 pygaarst.raster
 ---------------

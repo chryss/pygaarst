@@ -5,12 +5,16 @@ Getting started
 Prerequisites
 =============
 
-As of now, Pygaarst has only been run under Python 2.7. Making it work for 
-2.6 doesn't appear to be a high priority. Python 3 (probably >= 3.3 or 3.4) 
+As of now, Pygaarst requires Python 2.7. Python 3 (probably >= 3.3) 
 is on the roadmap.
 
-The following Python packages are required, including their dependencies and 
-any binary libraries:
+In case you only need the Landsat/Hyperion/ALI metadata parsing features or
+the client for the NASA MODAPS API there are no dependencies on external
+libraries.
+
+The following Python packages are required for using any raster manipulation
+functionality. This includes having the corresponding binary libraries
+installed:
 
 - numpy
 - pyproj
@@ -18,7 +22,9 @@ any binary libraries:
 
 The following Python packages are prerequisites for optional functionality:
 
-- h5py (for reading and processing HDF5 files)
+- h5py (for reading and processing HDF5 files such as VIIRS scenes)
+- python-hdf4 (for reading and processing HDF4 files such as MODIS scenes
+  -- but in its absence, GDAL will be tried)
 - matplotlib (for plotting)
 - mpl_toolkits.basemap (for plotting on a map)
 - pytest (for unit tests)
@@ -29,17 +35,27 @@ Future functionality is expected to require the following packages:
 
 - netCDF4 (for reading and processing NetCDF files)
 
-**Please note** that installing the prerequisites may, depending on your configuration, 
-require some thoughtful planning:
+**Please note** that installing the prerequisites may, depending on your
+configuration, require some planning:
 
 - Installing **Numpy** via ``pip`` will require a C and a Fortran 77 compiler to build the extension modules. A good alternative is to use `a binary distribution`_. The same is true for `Matplotlib`_.
-- **GDAL**, **pyproj**, **h5py**, **netCDF4** and **GEOS** (which is a prerequisite for shapely and the Basemap toolkit) require libraries to be installed before the Python bindings can be installed. The easiest way to do this in a consistent manner is often to use a package manager on GNU/Linux or OS X. For Windows, binary packages are available.
+- **GDAL**, **pyproj**, **h5py**, **python-hdf4**, **netCDF4** and **GEOS** (which is a prerequisite for shapely and the Basemap toolkit) require libraries to be installed before the Python bindings can be installed. The easiest way to do this in a consistent manner is often to use a package manager on GNU/Linux or OS X. For Windows, binary packages are available.
 - The **Basemap** toolkit for Matplotlib is a very large install. For Windows, a binary package is available. For GNU/Linux and OS X, it needs to be built from source. If you don't need to plot on maps, you don't need it!
-- In many cases, it may be easiest to install a complete scientific Python software package such as the Enthought Python Distribution or Anaconda. There is one exception to this: Pygaarst uses GDAL to access HDF-EOS (HDF4) files such as MODIS and ASTER L1B data and georeference files. GDAL is, however, not by default compiled with HDF4 support. On OS X, it is very difficult to install a GDAL with HDF4 support via either Homebrew or the Anaconda Python distribution. The `frameworks provided by kyngchaos`_, however, have the required support. I am not sure of the situation on Windows and GNU/Linux at this stage. If installing GDAL with HDF4 support is turing out to be too onerous, I may revisit the decision of using GDAL to access HDF-EOS files. 
+- In many cases, it may be easiest to install a complete scientific Python
+software package such as the Enthought Python Distribution or Anaconda, 
+or to use a package manager (on GNU/Linux or OS X) There is one exception to
+this: Pygaarst can use GDAL to access HDF-EOS (HDF4) files such as MODIS and
+ASTER L1B data and georeference files. GDAL is, however, not by default 
+compiled with HDF4 support. On OS X, it is rather difficult to install a GDAL 
+with HDF4 support via either Homebrew or the Anaconda Python distribution. The 
+`frameworks provided by kyngchaos`_, while otherwise a sub-optimal way to 
+provide the necessary environment, however, have the required support.
 
-To account for individual user preferences, dependencies are not listed in ``setup.py`` for automatic
-install. The ``requirements.txt`` file lists them, however, and can be used to install
-them via ``pip``.
+To account for individual user preferences, dependencies are listed in
+``setup.py`` as optional (using the ``extras_required`` key) for automatic
+install. The ``requirements.txt`` file lists them, however, and can be used 
+to install them via ``pip``. You may edit ``requirements.txt`` to comment out 
+the optional dependencies you **know** you won't need.
 
 My personal installation flow, which works well on OS X is to:
 
