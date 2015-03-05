@@ -10,8 +10,10 @@ import os, os.path
 import pytest
 from pygaarst import raster
 
+DATADIR = "/Volumes/SCIENCE/Coding/pygaarst/"
+
 def setup_module(module):
-    mydir = os.getcwd()
+    mydir = DATADIR
     global badgeotiff
     badgeotiff = os.path.join(mydir, 'tests/data/test.tiff')
     print badgeotiff

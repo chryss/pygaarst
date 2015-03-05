@@ -10,8 +10,10 @@ import os, os.path
 import pytest
 from pygaarst import mtlutils as mtl
 
+DATADIR = "/Volumes/SCIENCE/Coding/pygaarst/"
+
 def setup_module(module):
-    mydir = os.getcwd()
+    mydir = DATADIR
     datapath8 = os.path.join(mydir, "tests/data/LC80690152013153LGN00_MTL.txt")
     datapath51 = os.path.join(mydir, "tests/data/LT50690152011132GLC00_MTL.txt")
     datapath52 = os.path.join(mydir, "tests/data/L5070015_01520090716_MTL.txt")

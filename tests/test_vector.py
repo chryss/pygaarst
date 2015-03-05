@@ -8,6 +8,7 @@ Created by Chris Waigl on 2013-10-28.
 
 import os, os.path
 import pytest
+from osgeo import gdal
 from pygaarst import vector
 
 class Shpfile(object):

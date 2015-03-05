@@ -25,7 +25,7 @@ setup(
     package_data={
         'pygaarst': ['Hyperion_Spectral_Coverage.tab'],
     },
-    tests_require=['pytest'],
+    #tests_require=['pytest'],
     extras_requires = {
         'all_raster': ['numpy', 'GDAL', 'pyproj'],
         'hdf4': ['numpy', 'GDAL', 'pyproj', 'python-hdf4'],
