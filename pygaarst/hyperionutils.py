@@ -6,6 +6,8 @@ Utility functions for processing Hyperion datasets
 
 Created by Chris Waigl on 2014-04-25.
 """
+
+from __future__ import print_function, division
 import os, os.path
 import numpy as np
 
@@ -16,6 +18,7 @@ def gethyperionbands():
     """
     this_dir, this_filename = os.path.split(__file__)
     tabfile = os.path.join(this_dir, 'data', 'Hyperion_Spectral_coverage.tab')
+    #print(tabfile)
     converter = lambda x: x.replace('B', 'band')
     return np.recfromtxt(
         tabfile,

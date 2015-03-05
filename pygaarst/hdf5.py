@@ -12,7 +12,7 @@ import os.path
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
-LOGGER = logging.getLogger('pygaarst.raster')
+LOGGER = logging.getLogger('pygaarst.hdf5')
 
 from osgeo import osr
 try:
