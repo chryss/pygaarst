@@ -21,7 +21,7 @@
 *Refactored 2014-11-15: moved classes in files of their own.
 """
 
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 
 import logging
 logging.basicConfig(level=logging.DEBUG)

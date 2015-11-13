@@ -26,9 +26,6 @@ pip-log.txt
 .tox
 nosetests.xml
 
-# test data (large files)
-tests/data/*
-
 # Translations
 *.mo
 

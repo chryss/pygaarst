@@ -7,7 +7,7 @@ Utility functions for processing Landsat datasets
 Created by Chris Waigl on 2013-11-13.
 """
 
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 
 import numpy as np
 import logging

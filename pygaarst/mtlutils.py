@@ -11,7 +11,7 @@ Created by Chris Waigl on 2014-04-20.
 also used by Hyperion and ALI.
 """
 
-from __future__ import division
+from __future__ import division, print_function, absolute_import
 
 import os.path, glob
 import datetime

@@ -5,10 +5,12 @@ pygaarst.vector
 
 Classes and methods to handle vector file formats.
 
+TODO: Reimplement using fiona
+
 Created by Chris Waigl on 2013-10-28.
 """
 
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 
 from osgeo import gdal, ogr
 from osgeo import osr
@@ -46,11 +48,11 @@ class Shapefile(object):
 
     @property
     def data(self):
-        """A list of featurs"""
+        """A list of features"""
         return [feature for feature in self.layer]
 
     @property
     def proj4(self):
         """Spatial reference as PROJ4 string"""
         spref = self.layer.GetSpatialRef()
-        return spref.ExportToProj4
+        return spref.ExportToProj4()

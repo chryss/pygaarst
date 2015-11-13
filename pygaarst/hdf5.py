@@ -7,13 +7,15 @@
 *Refactored out of pygaarst.raster by Chris Waigl on 2014-11-17.*
 """
 
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import os.path
+from xml.dom import minidom
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.hdf5')
 
+import numpy as np
 from osgeo import osr
 try:
     from pyproj import Proj

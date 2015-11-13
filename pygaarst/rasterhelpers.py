@@ -8,6 +8,7 @@ Created by Chris Waigl on 2014-05-12.
 Copyright (c) 2014 Christine F. Waigl.
 """
 
+from __future__ import division, print_function, absolute_import
 import numpy as np
 
 import logging

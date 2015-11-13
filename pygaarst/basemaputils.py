@@ -7,7 +7,7 @@ Utility functions for easy plotting on a matplotlib basemap.
 Created by Chris Waigl on 2013-09-21.
 """
 
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 
 import numpy as np
 from mpl_toolkits.basemap import Basemap

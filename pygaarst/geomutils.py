@@ -8,7 +8,7 @@ In its simplest form, presumes shapely objects and numpy 2D arrays.
 Created by Chris Waigl on 2014-08-27.
 """
 
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import numpy as np
 
 import logging

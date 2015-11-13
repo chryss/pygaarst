@@ -9,7 +9,7 @@ See http://ladsweb.nascom.nasa.gov/data/web_services.html**
 *Created by Chris Waigl on 2013-10-22.*
 """
 
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import, unicode_literals
 
 import sys
 import urllib, urllib2

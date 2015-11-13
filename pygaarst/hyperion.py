@@ -7,8 +7,9 @@
 *Refactored out of pygaarst.raster by Chris Waigl on 2014-11-14.*
 """
 
-from __future__ import division, print_function
+from __future__ import division, print_function, absolute_import
 import os.path
+import itertools
 import numpy as np
 
 import logging
