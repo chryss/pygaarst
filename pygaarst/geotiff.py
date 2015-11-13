@@ -249,7 +249,7 @@ class GeoTIFF(object):
         """Quick and dirty plot of each band (channel, dataset) in the image.
         Requires Matplotlib."""
         import matplotlib.pyplot as plt
-        numbands = self.dataobj.RasterCount
+        numbands = self.nbands
         if numbands == 1:
             fig = plt.figure(figsize=(15, 10))
             plt.imshow(self.data[:, :], cmap='bone')
@@ -257,6 +257,7 @@ class GeoTIFF(object):
             for idx in range(numbands):
                 fig = plt.figure(figsize=(15, 10))
                 plt.imshow(self.data[idx, :, :], cmap='bone')
+        return True
 
     def clone(self, newpath, newdata):
         """

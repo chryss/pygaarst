@@ -7,7 +7,7 @@ Utility functions for processing Hyperion datasets
 Created by Chris Waigl on 2014-04-25.
 """
 
-from __future__ import print_function, division
+from __future__ import division, print_function, absolute_import
 import os, os.path
 import numpy as np
 

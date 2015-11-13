@@ -87,12 +87,9 @@ class ModapsClient(object):
         self.baseurl = MODAPSBASEURL
         self.headers = {
             u'User-Agent': u'satellite RS data fetcher'
-            }
+        }
 
-    def _parsedresponse(self, path, argdict, parserfun,
-                        data=None, unstabletags=False):
-        """Returns response based on request and parser function"""
-        url = self.baseurl + path
+    def _rawresponse(self, url, data=None):
         if data:
             querydata = urllib.urlencode(data)
             request = urllib2.Request(url, querydata, headers=self.headers)
@@ -106,6 +103,16 @@ class ModapsClient(object):
             if data:
                 logging.critical("Query string is %s" % querydata)
             sys.exit(1)
+        return response
+
+    def _makeurl(self, path):
+        return self.baseurl + path
+
+    def _parsedresponse(self, path, argdict, parserfun,
+                        data=None, unstabletags=False):
+        """Returns response based on request and parser function"""
+        url = self._makeurl(path)
+        response = self._rawresponse(url, data=data)
         xmldoc = minidom.parseString(response)
         if unstabletags:
             attr = xmldoc.documentElement.attributes.items()

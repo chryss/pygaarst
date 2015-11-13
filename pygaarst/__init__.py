@@ -18,3 +18,5 @@ __all__ = [
     "usgsl1",
     "vector",
     ]
+
+alwaysUseGDAL = False

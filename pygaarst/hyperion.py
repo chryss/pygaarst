@@ -39,7 +39,7 @@ class Hyperionscene(USGSL1scene):
             self.band_is_calibrated]
         self.permissiblebandid = [str(num) for num in range(1, 243)]
         self.calibratedbandid = [
-            str(num) for num in range(8, 58) + range(77, 225)]
+            str(num) for num in itertools.chain(range(8, 58), range(77, 225))]
         _validate_platformorigin('HYPERION', self.spacecraft, self.sensor)
 
     def __getattr__(self, bandname):
@@ -140,9 +140,9 @@ class Hyperionscene(USGSL1scene):
             return None
         sampleband = self.__getattr__(bandlist[0])
         if not islice:
-            islice = range(sampleband.nrow)
+            islice = list(range(sampleband.nrow))
         if not jslice:
-            jslice = range(sampleband.ncol)
+            jslice = list(range(sampleband.ncol))
         revnorth = sampleband.northing[::-1]
         east = sampleband.easting[...]
         scenecube = rh.Datacube(
