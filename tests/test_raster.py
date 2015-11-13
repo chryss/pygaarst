@@ -6,23 +6,23 @@ test_raster.py
 Created by Chris Waigl on 2013-09-18.
 """
 
+from __future__ import division, print_function, absolute_import
 import os, os.path
 import pytest
 from pygaarst import raster
 
-DATADIR = "/Volumes/SCIENCE/Coding/pygaarst/"
+DATADIR = "tests/data"
 
 def setup_module(module):
     mydir = DATADIR
     global badgeotiff
-    badgeotiff = os.path.join(mydir, 'tests/data/test.tiff')
-    print badgeotiff
+    badgeotiff = os.path.join(mydir, 'test.tiff')
     global rgbgeotiff
-    rgbgeotiff = os.path.join(mydir, 'tests/data/LC80680152013194_754_crop2.tiff')
+    rgbgeotiff = os.path.join(mydir, 'LC8_754_8bit.tiff')
     global viirsh5data
     viirsh5data = os.path.join(
         mydir, 
-        'tests/data/SVDNB_npp_d20130725_t2022157_e2023399_b09030_c20130725204748429995_cspp_dev.h5')
+        'testpyM15.h5')
 
 def test_invalid_geotiff_open(capsys):
     with pytest.raises(RuntimeError):
@@ -30,10 +30,9 @@ def test_invalid_geotiff_open(capsys):
 
 def test_valid_geotiff_open():
     a = raster.GeoTIFF(rgbgeotiff)
-    assert a.ncol == 787
-    assert a.nrow == 793
+    assert a
     
 def test_valid_hdf5_open():
     import h5py
     a = raster.HDF5(viirsh5data)
-    assert a.bandname == u'VIIRS-DNB-SDR_All'
+    assert a

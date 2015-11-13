@@ -6,6 +6,7 @@ test_basemaputils.py
 Created by Chris Waigl on 2013-09-21.
 """
 
+from __future__ import division, print_function, absolute_import
 import os, os.path
 import pytest
 import mpl_toolkits

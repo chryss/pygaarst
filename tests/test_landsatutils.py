@@ -1,49 +1,57 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-test_raster.py
+test_landsatutils.py
 
 Created by Chris Waigl on 2013-11-10.
 """
 
+from __future__ import division, print_function, absolute_import
 import os, os.path
 import pytest
-from pygaarst import mtlutils as mtl
-
-DATADIR = "/Volumes/SCIENCE/Coding/pygaarst/"
+from pygaarst import landsatutils as lu
 
 def setup_module(module):
-    mydir = DATADIR
-    datapath8 = os.path.join(mydir, "tests/data/LC80690152013153LGN00_MTL.txt")
-    datapath51 = os.path.join(mydir, "tests/data/LT50690152011132GLC00_MTL.txt")
-    datapath52 = os.path.join(mydir, "tests/data/L5070015_01520090716_MTL.txt")
-    datapath7 = os.path.join(mydir, "tests/data/LE70700152011147EDC00_MTL.txt")
-    global datapaths
-    datapaths = [datapath8, datapath7, datapath51, datapath52]
+    global datadir
+    datadir = 'tests/data'
+    global scname 
+    scname = 'LC8_test'
 
-def test_file():
-    for p in datapaths:
-        a = os.path.isfile(p)
-        assert a
+@pytest.fixture(scope='module')
+def landsatscene():
+    from pygaarst import landsat
+    scpath = os.path.join(datadir, scname)
+    sc = landsat.Landsatscene(scpath)
+    sc.infix = '_clip'
+    return sc
 
-def test_read_metadata_L8():
-    meta = mtl.parsemeta(datapaths[0])
-    assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['SPACECRAFT_ID']  == 'LANDSAT_8'
-    assert meta['L1_METADATA_FILE']['METADATA_FILE_INFO']['PROCESSING_SOFTWARE_VERSION'] == 'LPGS_2.2.2'
+def test_getKconst():
+    assert lu.getKconstants('L5') == (607.76, 1260.56)
 
+def test_getbands():
+    assert lu.get_bands('L8')[3] == '4'
 
-def test_read_metadata_L7():
-    meta = mtl.parsemeta(datapaths[1])
-    assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['SPACECRAFT_ID']  == 'LANDSAT_7'
-    assert meta['L1_METADATA_FILE']['METADATA_FILE_INFO']['PROCESSING_SOFTWARE_VERSION'] == 'LPGS_12.2.1'
+def test_oldnew():
+    assert lu.lskeyselect(False, 'DATE_ACQUIRED') == 'ACQUISITION_DATE'
 
-def test_read_metadata_L51():
-    meta = mtl.parsemeta(datapaths[2])
-    assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['SPACECRAFT_ID']  == 'LANDSAT_5'
-    assert meta['L1_METADATA_FILE']['METADATA_FILE_INFO']['PROCESSING_SOFTWARE_VERSION'] == 'LPGS_12.2.1'
+def test_TIRlabel():
+    assert  lu.getTIRlabel('L8') == 'band10'
 
-def test_read_metadata_L52():
-    meta = mtl.parsemeta(datapaths[3])
-    assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['SPACECRAFT_ID']  == 'Landsat5'
-    assert meta['L1_METADATA_FILE']['PRODUCT_METADATA']['PROCESSING_SOFTWARE'] == 'LPGS_11.5.1'
+def test_d():
+    assert lu.getd(100) == 1.00184
 
+def test_esun():
+    assert lu.getesun('L5', '5') == 225.7
+
+def test_tir(landsatscene):
+    tir = landsatscene.TIRband
+    assert lu.naivethermal(tir)[0][0] == 0.0
+
+def test_LTK(landsatscene):
+    assert lu.LTKcloud(landsatscene)[3][3] == 5.0
+
+def test_tKelvin(landsatscene):
+    assert landsatscene.band10.tKelvin[-1][7] == 300.38249200364885
+
+def test_metadataformat(landsatscene):
+    assert landsatscene.band10.newmetaformat
