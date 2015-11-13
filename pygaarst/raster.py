@@ -35,6 +35,7 @@ from pygaarst.landsat import Landsatscene, Landsatband
 from pygaarst.ali import ALIscene, ALIband
 from pygaarst.hyperion import Hyperionscene, Hyperionband
 from pygaarst.hdf5 import HDF5, VIIRSHDF5
+from pygaarst.hdf5 import HDF4, MODSWHDF4
 
 ### to be refactored
 
