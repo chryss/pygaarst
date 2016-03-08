@@ -23,6 +23,7 @@ except ImportError:
         "PROJ4 is not available. "
         "Any method requiring coordinate transform will fail.")
 from pygaarst.rasterhelpers import PygaarstRasterError
+import pygaarst.mtlutils as mtl
 
 try:
     import pyhdf.SD
@@ -67,14 +68,16 @@ class MODSWHDF4(HDF4):
         super(MODSWHDF4, self).__init__(filepath)
         self.datasets = self.dataobj.datasets().keys()
         self.bandnames = None
-        self.datameta = self.rawmetadata['CoreMetadata.0']
+        self.coremeta = mtl.parsemeta(self.rawmetadata['CoreMetadata.0'])
+        self.archivemeta = mtl.parsemeta(self.rawmetadata['ArchiveMetadata.0'])
+        self.coremeta = mtl.parsemeta(self.rawmetadata['CoreMetadata.0'])
         if geofilepath:
             self.geofilepath = geofilepath
         else:
             try:
                 geofn = self.dataobj.attrs['N_GEO_Ref'][0][0]
                 self.geofilepath = os.path.join(self.dirname, geofn)
-            except KeyError:
+            except:
                 self.geofilepath = None
 
     def __getattr__(self, bandname):
