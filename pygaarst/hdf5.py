@@ -192,15 +192,17 @@ class VIIRSHDF5(HDF5):
         flatidx = _latlonmetric(self.lats, latref, self.lons, lonref).argmin()
         return np.unravel_index(flatidx, self.lons.shape)
 
-    def crop(self, latref, lonref, pixradius):
+    def crop(self, latref, lonref, delx, dely=None):
+        if not dely:
+            dely = delx
         """Reduces dataset to +- pixradius pixels around a given location.
         Returns start and end idx in both dimensions for slicing"""
         maxi, maxj = self.lons.shape
         idx = self.getnearestidx(latref, lonref)
-        starti = max(0, idx[0] - pixradius)
-        endi = min(idx[0] + pixradius + 1, maxi)
-        startj = max(0, idx[1] - pixradius)
-        endj = min(idx[1] + pixradius + 1, maxj)
+        starti = max(0, idx[0] - delx)
+        endi = min(idx[0] + delx + 1, maxi)
+        startj = max(0, idx[1] - dely)
+        endj = min(idx[1] + dely + 1, maxj)
         return starti, endi, startj, endj
         
 
