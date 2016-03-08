@@ -42,11 +42,14 @@ capabilities are supported:
   to represent a scene directory as retrieved from the USGS data
   portal
 * :class:`VIIRSHDF5` for NPP VIIRS SDS dataset files in HDF5 format,
-  as retrieved from NOAA's portals
+  as retrieved from NOAA's portalsm inheriting from a generic 
+  :class:`HDF5` class
+* :class:`MODSWHDF4` for MODIS Swath dataset files in HDF-EOS format,
+  inheriting from a generic :class:`HDF4` class 
 * Reading georeference files or metadata and calculation of pixel-center
-  and, for gridded data, pixel-corner coordinate references
+  and, for gridded data, pixel-corner coordinate references 
 * A metadata parser for USGS-style MTL files in :mod:`pygaarst.mtlutils`
-* Multiple helper methods, functions and properties for frequently
+* Helper methods, functions and properties for frequently
   repeated tasks: transformation to at-sensor radiance and reflectance,
   NDVI and NBR (for Landsat) as well as generic normalized difference
   indices, radiant temperature from thermal infrared bands, calculation 
@@ -57,11 +60,11 @@ capabilities are supported:
 
 The following capabilities are planned, roughly in order of priority:
 
-* HDF4 (EOS) swath datasets (MODIS and ASTER Level 1B)
+* Python 3 support
 * Basic geometric and statistical operations involving
   raster and vector structures such as overlays, find-nearest, is-in... 
-* Python 3 support
-* MODIS gridded data products
+* MODIS gridded data products and ASTER-specific swath products
+* Progressively, other satellite data products
 
 A step-by-step example of using :mod:`pygaarst.raster` to access and plot
 VIIRS and Landsat data is worked through in `this IPython Notebook`_.
