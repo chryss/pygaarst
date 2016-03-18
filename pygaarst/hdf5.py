@@ -165,6 +165,19 @@ class VIIRSHDF5(HDF5):
         return geodat
 
     @property
+    def ascending_node(self):
+        """True if scene is acquired on an ascending node, otherwise False."""        
+        middlelatdelta = self.lats[-100, 3200] - self.lats[100, 3200]
+        if abs(middlelatdelta) > 500:
+            logging.WARNING(
+            "Property 'ascending_node' of {} cannot be easily established. Please assign it manually.".format(
+                repr(self)))
+            return None
+        if middlelatdelta < 0:
+            return False
+        return True
+
+    @property
     def lats(self):
         """Latitudes as provided by georeference array"""
         return self.geodata['Latitude'][:]
