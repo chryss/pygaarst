@@ -9,6 +9,9 @@
 
 from __future__ import division, print_function, absolute_import
 import os.path
+import re
+import glob
+from collections import OrderedDict
 from xml.dom import minidom
 
 import logging
@@ -44,8 +47,8 @@ class HDF5(object):
             self.filepath = filepath
             self.dirname = os.path.dirname(filepath)
             # We'll want, possibly, metadata from the user block, for which
-            # the HDF5 obj needs to be closed, but we first need the 
-            # userblock length. Thus some odd rigamarole... 
+            # the HDF5 obj needs to be closed, but we first need the
+            # userblock length. Thus some odd rigamarole...
             self.dataobj = h5py.File(filepath, "r")
             if self.dataobj.userblock_size != 0:
                 self.userblock_size = self.dataobj.userblock_size
@@ -71,7 +74,7 @@ def _getlabel(groupname):
 
 def _handlenode(node, outdict):
     """Recursive function to parse metadata dictionaries for VIIRS.
-    
+
     Arguments:
         node: an XML.minidom node
         outdict: the recursively assembled metadata dictionary
@@ -95,7 +98,7 @@ def _latlonmetric(latarray, latref, lonarray, lonref):
             "distance comparisons."
         )
     return np.sqrt(
-        np.square(latarray - latref) + 
+        np.square(latarray - latref) +
             np.cos(np.radians(latarray)) * np.square(lonarray - lonref))
 
 class VIIRSHDF5(HDF5):
@@ -114,10 +117,10 @@ class VIIRSHDF5(HDF5):
         if self.userblock:
             parsed_ub = minidom.parseString(self.userblock)
             metadatablock = parsed_ub.getElementsByTagName("HDF_UserBlock")
-            for node in metadatablock[0].childNodes: 
+            for node in metadatablock[0].childNodes:
                 self.meta = _handlenode(node, self.meta)
         # ... and then from the HDF5 dataobject attributes:
-        for key in self.dataobj.attrs: 
+        for key in self.dataobj.attrs:
             self.meta[key] = unicode(self.dataobj.attrs[key][0][0])
         self.bandnames = self.dataobj['All_Data'].keys()
         self.bandlabels = {_getlabel(nm): nm for nm in self.bandnames}
@@ -166,10 +169,10 @@ class VIIRSHDF5(HDF5):
 
     @property
     def ascending_node(self):
-        """True if scene is acquired on an ascending node, otherwise False."""        
+        """True if scene is acquired on an ascending node, otherwise False."""
         middlelatdelta = self.lats[-100, 3200] - self.lats[100, 3200]
         if abs(middlelatdelta) > 500:
-            logging.WARNING(
+            LOGGER.warning(
             "Property 'ascending_node' of {} cannot be easily established. Please assign it manually.".format(
                 repr(self)))
             return None
@@ -186,12 +189,12 @@ class VIIRSHDF5(HDF5):
     def lons(self):
         """Longitudes as provided by georeference array"""
         return self.geodata['Longitude'][:]
-    
+
     def close(self):
         """Closes open HDF5 file object"""
         self.dataobj.close()
         self.geodata.file.close()
-    
+
     def getdataset(self, datasetname):
         return self.dataobj['All_Data'][self.longbandname][datasetname][:]
 
@@ -217,32 +220,33 @@ class VIIRSHDF5(HDF5):
         startj = max(0, idx[1] - dely)
         endj = min(idx[1] + dely + 1, maxj)
         return starti, endi, startj, endj
-        
+
 
 def getVIIRSfilesbygranule(basedir, scenelist=[]):
     """
-    Returns a dictionary that parses a list of scene directories where each 
+    Returns a dictionary that parses a list of scene directories where each
     name YYYY_MM_DD_JJJ_hhmm refers to an overpass timestamp and contains
     multiple granules and individual desaggregated band files. GINA (the
-    Geographic Information Network of Alaska) distributes data this way. 
+    Geographic Information Network of Alaska) distributes data this way.
     """
     regex = re.compile(r"(?P<ftype>[A-Z0-9]{5})_[a-z]+_d(?P<date>\d{8})_t(?P<time>\d{7})_e\d+_b(\d+)_c\d+_\w+.h5")
     if scenelist:
         subdirs = filter(
-            os.path.isdir, 
+            os.path.isdir,
             [os.path.join(basedir, item) for item in scenelist])
     else:
-        subdirs = sorted(
-            glob.glob(basedir + 
-            '/20[0-1][0-9]_[0-1][0-9]_[0-3][0-9]_[0-9][0-9][0-9]_[0-2][0-9][0-6][0-9]'))
+        subdirs = sorted(glob.glob(
+                basedir +
+                '/20[0-1][0-9]_[0-1][0-9]_[0-3][0-9]_' +
+                '[0-9][0-9][0-9]_[0-2][0-9][0-6][0-9]'))
     overpasses = OrderedDict()
     for subdir in subdirs:
         basename = os.path.split(subdir)[-1]
         overpasses[basename] = {}
         overpasses[basename]['dir'] = os.path.join(subdir, 'sdr')
         datafiles = sorted(
-            [item for item in os.listdir(overpasses[basename]['dir']) 
-            if item.endswith('.h5')])
+            [item for item in os.listdir(overpasses[basename]['dir'])
+                if item.endswith('.h5')])
         if len(datafiles)%25 != 0:
             overpasses[basename]['message'] = "Some data files are missing in {}: {} is not divisible by 25".format(basename, len(datafiles))
         numgran = len(datafiles)//25
@@ -250,7 +254,7 @@ def getVIIRSfilesbygranule(basedir, scenelist=[]):
         for mo, fname in zip(mos, datafiles):
             granulestr = mo.groupdict()['date'] + '_' + mo.groupdict()['time']
             ftype = mo.groupdict()['ftype']
-            try: 
+            try:
                 overpasses[basename][granulestr][ftype] = fname
             except KeyError:
                 overpasses[basename][granulestr] = {}

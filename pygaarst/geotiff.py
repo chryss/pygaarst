@@ -251,11 +251,11 @@ class GeoTIFF(object):
         import matplotlib.pyplot as plt
         numbands = self.nbands
         if numbands == 1:
-            fig = plt.figure(figsize=(15, 10))
+            plt.figure(figsize=(15, 10))
             plt.imshow(self.data[:, :], cmap='bone')
         elif numbands > 1:
             for idx in range(numbands):
-                fig = plt.figure(figsize=(15, 10))
+                plt.figure(figsize=(15, 10))
                 plt.imshow(self.data[idx, :, :], cmap='bone')
         return True
 

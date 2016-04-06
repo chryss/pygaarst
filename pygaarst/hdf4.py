@@ -74,36 +74,16 @@ class MODSWHDF4(HDF4):
         if geofilepath:
             self.geofilepath = geofilepath
         else:
-            try:
-                geofn = self.dataobj.attrs['N_GEO_Ref'][0][0]
-                self.geofilepath = os.path.join(self.dirname, geofn)
-            except:
-                self.geofilepath = None
-
-    def __getattr__(self, bandname):
-        """
-        Override _gettattr__() for bandnames in self.bandlabels.
-        """
-        if bandname in self.bandlabels:
-            return self.dataobj['All_Data/' + self.bandlabels[bandname]]
-        else:
-            return object.__getattribute__(self, bandname)
+            # TODO
+            pass
 
     @property
     def geodata(self):
         """Object representing the georeference data, in its entirety"""
+        geodat = None
         if self.geofilepath:
-            geodat = h5py.File(self.geofilepath, "r")
-            if not geodat:
-                raise PygaarstRasterError(
-                    "Unable to open georeference file %s." % self.geofilepath
-                )
-            self.geogroupkey = geodat['All_Data'].keys()[0]
-            return geodat['All_Data/%s' % self.geogroupkey]
-        elif self.GEO:
-            # It could be an aggregated multi-band VIIRS file
-            # with embedded georeferences
-            return self.GEO
+            # TODO
+            pass
         else:
             raise PygaarstRasterError(
                 "Unable to find georeference information for %s."
@@ -113,9 +93,9 @@ class MODSWHDF4(HDF4):
     @property
     def lats(self):
         """Latitudes as provided by georeference array"""
-        return self.geodata['Latitude'][:]
+        pass
 
     @property
     def lons(self):
         """Longitudes as provided by georeference array"""
-        return self.geodata['Longitude'][:]
+        pass

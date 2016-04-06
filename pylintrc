@@ -1,0 +1,22 @@
+[TYPECHECK]
+
+ignored-modules = numpy
+
+[REPORTS]
+
+# set the output format. Available formats are text, parseable, colorized and
+# html
+output-format=colorized
+
+[MESSAGES CONTROL]
+
+disable=invalid-name,unused-import,too-few-public-methods,attribute-defined-outside-init
+
+[MISCELLANEOUS]
+
+# List of note tags to take in consideration, separated by a comma.
+# FIXME -- something which needs fixing
+# TODO  -- future plan
+# XXX   -- some concern
+# YYY   -- comment/answer to above mentioned concern
+notes=FIXME,TODO,XXX,YYY

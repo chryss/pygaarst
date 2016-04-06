@@ -141,7 +141,7 @@ def _checkstatus(status, line):
 
     The status codes are::
         0 - BEGIN parsing; 1 - ENTER METADATA GROUP, 2 - READ KEY-VALUE PAIR,
-        3 - END METDADATA GROUP, 4 - END PARSING, 5 - BEGIN OBJECT, 
+        3 - END METDADATA GROUP, 4 - END PARSING, 5 - BEGIN OBJECT,
         6 - END OBJECT
 
     Permitted Transitions::
@@ -151,7 +151,7 @@ def _checkstatus(status, line):
         3 --> 1, 3 --> 2, 3 --> 4, 3 --> 5, 3 --> 6
         5 --> 1, 5 --> 2, 5 --> 5, 5 --> 6
         6 --> 1, 6 --> 2, 6 --> 5, 6 --> 6
-        
+
     """
     newstatus = 0
     if status == 0:
@@ -339,7 +339,7 @@ def _postprocess(valuestr):
     if valuestr.startswith('"') and valuestr.endswith('"'):
         # it's a string
             return valuestr[1:-1]
-    
+
     # If we get here, we still haven't returned anything.
     logging.info(
         "The value %s couldn't be parsed as " % valuestr
@@ -350,7 +350,7 @@ def parsemeta(metadataloc):
     """Parses the metadata.
 
     Arguments:
-        metadataloc: a filename or a directory. Or a the string to 
+        metadataloc: a filename or a directory. Or a the string to
         be parsed as an ODL block
     Returns metadata dictionary
     """
@@ -367,7 +367,7 @@ def parsemeta(metadataloc):
         else:
             tryID = os.path.normpath(metadataloc).split(os.sep)[-1]
             if metadataloc in metalist:
-                metadatastr = trypath
+                metadatastr = metadataloc
             elif os.path.join(metadataloc, tryID + '_MTL.txt') in metalist:
                 metadatastr = os.path.join(metadataloc, tryID + '_MTL.txt')
             else:
@@ -406,7 +406,7 @@ def _parsemetastream(filehandle):
             # we reached the end in the previous iteration,
             # but are still reading lines
             logging.warning(
-                "Metadata file %s appears to " % filehandle 
+                "Metadata file %s appears to " % filehandle
                 + "have extra lines after the end of the metadata. "
                 + "This is probably, but not necessarily, harmless.")
         status = _checkstatus(status, line)

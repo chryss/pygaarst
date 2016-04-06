@@ -10,13 +10,13 @@
 from __future__ import division, print_function, absolute_import
 import os.path
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
-LOGGER = logging.getLogger('pygaarst.ali')
-
 import pygaarst.irutils as ir
 from pygaarst.rasterhelpers import PygaarstRasterError
 from pygaarst.usgsl1 import USGSL1scene, USGSL1band, _validate_platformorigin
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger('pygaarst.ali')
 
 class ALIscene(USGSL1scene):
     """
@@ -41,7 +41,7 @@ class ALIscene(USGSL1scene):
         """
         # see https://eo1.usgs.gov/sensors/hyperioncoverage
         isband = False
-        head, sep, tail = bandname.lower().partition('band')
+        head, _, tail = bandname.lower().partition('band')
         try:
             band = tail.upper()
             if head == '':

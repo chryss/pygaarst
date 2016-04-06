@@ -24,9 +24,6 @@
 from __future__ import division, print_function, absolute_import
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
-LOGGER = logging.getLogger('pygaarst.raster')
-
 # from netCDF4 import Dataset as netCDF
  
 from pygaarst.geotiff import GeoTIFF
@@ -36,6 +33,9 @@ from pygaarst.ali import ALIscene, ALIband
 from pygaarst.hyperion import Hyperionscene, Hyperionband
 from pygaarst.hdf5 import HDF5, VIIRSHDF5
 from pygaarst.hdf4 import HDF4, MODSWHDF4
+
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger('pygaarst.raster')
 
 ### to be refactored
 
