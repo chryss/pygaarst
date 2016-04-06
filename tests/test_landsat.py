@@ -9,6 +9,7 @@ Created by Chris Waigl on 2015-04-22.
 from __future__ import division, print_function, absolute_import
 import os, os.path
 import pytest
+from pygaarst import raster
 from pygaarst import landsat as ls
 
 def setup_module(module):
@@ -19,6 +20,13 @@ def setup_module(module):
 
 @pytest.fixture(scope='module')
 def landsatscene():
+    scpath = os.path.join(datadir, scname)
+    sc = raster.Landsatscene(scpath)
+    sc.infix = '_clip'
+    return sc
+
+@pytest.fixture(scope='module')
+def landsatscene_direct():
     scpath = os.path.join(datadir, scname)
     sc = ls.Landsatscene(scpath)
     sc.infix = '_clip'
@@ -31,6 +39,9 @@ def tirband(landsatscene):
 def test_open_valid_landsatscene(landsatscene):
     assert landsatscene
     assert landsatscene.spacecraft == 'L8'
+
+def test_open_valid_landsatscene_directly(landsatscene_direct):
+    assert landsatscene_direct
 
 def test_landsatscene_basic_properties(landsatscene):
     assert int(landsatscene.NDVI[6][6]*100) == 35

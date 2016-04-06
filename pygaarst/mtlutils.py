@@ -367,7 +367,7 @@ def parsemeta(metadataloc):
             if len(metalist) > 1:
                 logging.warning(
                     "More than one file in directory match metadata "
-                    + "file pattern. Using %s." % metadatafn)
+                    + "file pattern. Using %s." % metadatastr)
     else:
         metadatastr = metadataloc
 
@@ -399,7 +399,7 @@ def _parsemetastream(filehandle):
             # we reached the end in the previous iteration,
             # but are still reading lines
             logging.warning(
-                "Metadata file %s appears to " % metadatafn
+                "Metadata file %s appears to " % filehandle 
                 + "have extra lines after the end of the metadata. "
                 + "This is probably, but not necessarily, harmless.")
         status = _checkstatus(status, line)

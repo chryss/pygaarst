@@ -119,6 +119,11 @@ GROUP                  = INVENTORYMETADATA
 END_GROUP              = INVENTORYMETADATA
 
 END
+
+xxx
+
+
+    
 """
 
 def setup_module(module):
