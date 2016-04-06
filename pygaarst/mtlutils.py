@@ -362,12 +362,19 @@ def parsemeta(metadataloc):
             raise MTLParseError(
                 "No files matching metadata file pattern in directory %s."
                 % metadataloc)
-        elif len(metalist) > 0:
+        elif len(metalist) == 1:
             metadatastr = metalist[0]
-            if len(metalist) > 1:
-                logging.warning(
-                    "More than one file in directory match metadata "
-                    + "file pattern. Using %s." % metadatastr)
+        else:
+            tryID = os.path.normpath(metadataloc).split(os.sep)[-1]
+            if metadataloc in metalist:
+                metadatastr = trypath
+            elif os.path.join(metadataloc, tryID + '_MTL.txt') in metalist:
+                metadatastr = os.path.join(metadataloc, tryID + '_MTL.txt')
+            else:
+                metadatastr = metalist[0]
+            logging.warning(
+                "More than one file in directory match metadata "
+                + "file pattern. Using %s." % metadatastr)
     else:
         metadatastr = metadataloc
 

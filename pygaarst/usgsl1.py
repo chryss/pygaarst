@@ -18,6 +18,7 @@ import pygaarst.irutils as ir
 import pygaarst.landsatutils as lu
 import pygaarst.mtlutils as mtl
 from pygaarst.geotiff import GeoTIFF
+from pygaarst.rasterhelpers import PygaarstRasterError
 
 def _validate_platformorigin(platform, spid, sensorid=None):
     """Helper function to validate the class called for the data was"""
@@ -57,7 +58,13 @@ class USGSL1scene(object):
         self.dirname = dirname
         self.infix = ''
         metadata = mtl.parsemeta(dirname)
-        self.meta = metadata['L1_METADATA_FILE']
+        try:
+            self.meta = metadata['L1_METADATA_FILE']
+        except KeyError:
+            raise PygaarstRasterError(
+                "Metadata from %s could not be read. " % dirname 
+                + " Please check your dataset."
+            )
         self.spacecraft = _get_spacecraftid(
             self.meta['PRODUCT_METADATA']['SPACECRAFT_ID']
             )
