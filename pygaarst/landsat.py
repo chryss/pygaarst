@@ -92,19 +92,23 @@ class Landsatscene(USGSL1scene):
                 + "to calculate NDVI.")
             raise
 
-    @property
-    def NBR(self):
+    def get_NBR(self, reflectance=True):
         """The Normalized Burn Index"""
         label1, label2 = lu.NBR_BANDS[self.spacecraft]
         try:
-            arr1 = self.__getattr__(label1).data
-            arr2 = self.__getattr__(label2).data
+            if reflectance: 
+                arr1 = self.__getattr__(label1).reflectance
+                arr2 = self.__getattr__(label2).reflectance
+            else:
+                arr1 = self.__getattr__(label1).data
+                arr2 = self.__getattr__(label2).data
             return ir.normdiff(arr1, arr2)
         except AttributeError:
             LOGGER.critical(
                 "Error accessing bands %s and %s " % (label1, label2)
                 + "to calculate NBR.")
             raise
+    NBR = property(get_NBR)
 
     @property
     def TIRband(self):
