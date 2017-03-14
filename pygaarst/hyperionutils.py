@@ -9,6 +9,7 @@ Created by Chris Waigl on 2014-04-25.
 
 from __future__ import division, print_function, absolute_import
 import os, os.path
+import datetime as dt
 import numpy as np
 
 def gethyperionbands():
@@ -28,6 +29,22 @@ def gethyperionbands():
         converters={0: converter}
         )
 
+def gethyperionirradiance():
+    this_dir, this_filename = os.path.split(__file__)
+    tabfile = os.path.join(this_dir, 'data', 'Hyperion_Spectral_Irradiance.txt')
+    converter = lambda x: x.replace('b', '')
+    return np.recfromtxt(
+        tabfile,
+        delimiter='\t',
+        skip_header=1,
+        names=True,
+        converters={0: converter}
+        )
+
+def getesun(band):
+    irradiances = gethyperionirradiance()
+    return irradiances[irradiances['Hyperion_band'] == band]['Spectral_irradiance_Wm2mu'][0]
+
 def find_nearest_hyp(wavelength):
     """
     Returns index and wavelength of Hyperion band closest to input wavelength
@@ -44,3 +61,5 @@ def find_nearest_hyp(wavelength):
     wavs = gethyperionbands().Average_Wavelength_nm
     idx = (np.abs(wavs - wavelength)).argmin()
     return idx, bands[idx], wavs[idx]
+
+

@@ -8,6 +8,7 @@
 """
 
 from __future__ import division, print_function, absolute_import
+import datetime as dt
 import os.path
 import itertools
 import numpy as np
@@ -17,6 +18,7 @@ logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.hyperion')
 
 import pygaarst.hyperionutils as hyp
+import pygaarst.landsatutils as lu
 import pygaarst.rasterhelpers as rh
 from pygaarst.rasterhelpers import PygaarstRasterError
 from pygaarst.usgsl1 import USGSL1scene, USGSL1band, _validate_platformorigin
@@ -183,3 +185,27 @@ class Hyperionband(USGSL1band):
         else:
             rad = self.data / self.meta['RADIANCE_SCALING']['SCALING_FACTOR_SWIR']
         return rad.astype('float32')
+        
+    @property
+    def reflectance(self):
+        """
+        Reflectance (0 .. 1) derived from DN and metadata, as numpy array
+        """
+        if not self.meta:
+            raise PygaarstRasterError(
+                "Impossible to retrieve metadata for band. "
+                + "No reflectance calculation possible.")
+        elif self.sensor == 'HYPERION':
+            dac = dt.datetime.strptime(
+                self.meta['PRODUCT_METADATA']['START_TIME'],
+                '%Y %j %H:%M:%S')
+            sedeg = self.meta['PRODUCT_PARAMETERS']['SUN_ELEVATION']
+            juliandac = int(dt.date.strftime(dac, '%j'))
+            d = lu.getd(juliandac)
+            esun = hyp.getesun(self.band)
+            rad = self.radiance
+            return (np.pi * d * d * rad)/(esun * np.sin(sedeg*np.pi/180))
+        else:
+            raise PygaarstRasterError(
+                "Unkown sensor {} on spacecraft {}.".format(
+                self.sensor, self.spacecraft))
