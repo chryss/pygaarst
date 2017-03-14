@@ -32,7 +32,7 @@ def map_interiorAK(
         projection='aea',
         lat_1=55., lat_2=75., lat_0=65., lon_0=-150.)
     bmap.drawcoastlines()
-    bmap.drawrivers(color=water)
+    #bmap.drawrivers(color=water)
     bmap.drawcountries()
     bmap.fillcontinents(lake_color=water, color=earth)
     # labels = [left,right,top,bottom]
