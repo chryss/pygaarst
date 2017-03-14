@@ -115,6 +115,7 @@ class VIIRSHDF5(HDF5):
         # put together metadata. First from the userblock, if any:
         self.meta = {}
         if self.userblock:
+            self.userblock = self.userblock.rstrip('\x00')
             parsed_ub = minidom.parseString(self.userblock)
             metadatablock = parsed_ub.getElementsByTagName("HDF_UserBlock")
             for node in metadatablock[0].childNodes:
