@@ -79,13 +79,22 @@ def _handlenode(node, outdict):
         node: an XML.minidom node
         outdict: the recursively assembled metadata dictionary
     """
-    if node.firstChild.nodeType == node.TEXT_NODE:
+    if not node.childNodes:
+        outdict[node.nodeName] = None
+    elif node.firstChild.nodeType == node.TEXT_NODE:
         outdict[node.nodeName] = node.firstChild.nodeValue
     else:
         newdict = {}
         for childnode in node.childNodes:
             newdict = _handlenode(childnode, newdict)
-        outdict[node.nodeName] = newdict
+        try:
+            outdict[node.nodeName].append(newdict)
+        except KeyError:
+            outdict[node.nodeName] = newdict
+        except AttributeError:
+            outdict[node.nodeName] = [outdict[node.nodeName]]
+            outdict[node.nodeName].append(newdict)            
+#        print(newdict)
     return outdict
 
 def _latlonmetric(latarray, latref, lonarray, lonref):
@@ -127,7 +136,10 @@ class VIIRSHDF5(HDF5):
         self.bandlabels = {_getlabel(nm): nm for nm in self.bandnames}
         self.bands = {}
         self.bandname = self.dataobj['All_Data'].keys()[0]
-        self.longbandname = self.meta[u'Data_Product']['N_Collection_Short_Name'] + u'_All'
+        try:
+            self.longbandname = self.meta[u'Data_Product']['N_Collection_Short_Name'] + u'_All'
+        except TypeError:
+            pass
         self.datasets = self.dataobj['All_Data/'+self.bandname].items()
         if geofilepath:
             self.geofilepath = geofilepath
