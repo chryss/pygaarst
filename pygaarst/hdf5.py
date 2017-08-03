@@ -163,10 +163,12 @@ class VIIRSHDF5(HDF5):
     def geodata(self):
         """Object representing the georeference data, in its entirety"""
         if self.geofilepath:
-            geodat = h5py.File(self.geofilepath, "r")
-            if not geodat:
+            try:
+                geodat = h5py.File(self.geofilepath, "r")
+            except IOError as err:
                 raise PygaarstRasterError(
-                    "Unable to open georeference file %s." % self.geofilepath
+                    "Unable to open georeference file {}: {}".format(
+                        self.geofilepath, err)
                 )
             self.geogroupkey = geodat['All_Data'].keys()[0]
             return geodat['All_Data/%s' % self.geogroupkey]
