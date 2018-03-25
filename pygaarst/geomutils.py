@@ -58,10 +58,10 @@ class Memoize(object):
 def _getpolybounds(arrayshape, polygon):
     """Returns bounds of shapely polygon or array, as int in pixel"""
     jmin, imin, jmax, imax = polygon.bounds
-    imin = int(polygon.bounds[1])
-    jmin = int(polygon.bounds[0])
-    imax = int(np.minimum(polygon.bounds[3], arrayshape[0]))
-    jmax = int(np.minimum(polygon.bounds[2], arrayshape[1]))
+    imin = int(np.max(polygon.bounds[1], 0))
+    jmin = int(np.max(polygon.bounds[0], 0))
+    imax = int(np.minimum(polygon.bounds[3], arrayshape[0]-1))
+    jmax = int(np.minimum(polygon.bounds[2], arrayshape[1]-1))
     return imin, jmin, imax, jmax
 
 def _overlaypoly(arrayshape, poly=None):
@@ -92,15 +92,18 @@ def overlayvectors(twoDarray, polygons):
       array of same dimensions as twoDarray that has 1 for the points within
       the polygons object and 0 otherwise
     """
-    if type(polygons) == 'shapely.geometry.polygon.Polygon':
+#    if type(polygons) == 'shapely.geometry.polygon.Polygon':
         #It's a single polygon, not a Multipolygons object (usual case)
-        polygons = list(polygons)
+#        polygons = list(polygons)
     mask = np.zeros(twoDarray.shape, dtype=int)
     _isinpoly.resetcache()
-    for poly in polygons:
-        # Calculat a mask for the polygon: array with 1 for pts within
-        # the polygon, and 0 outside
-        polymask = _overlaypoly(twoDarray.shape, poly=poly)
-        mask = np.maximum(polymask, mask)
+    try:
+        for poly in polygons:
+            # Calculat a mask for the polygon: array with 1 for pts within
+            # the polygon, and 0 outside
+            polymask = _overlaypoly(twoDarray.shape, poly=poly)
+            mask = np.maximum(polymask, mask)
+    except TypeError:   # single polygon, not multipolygon
+        mask = _overlaypoly(twoDarray.shape, poly=polygons)
     #_isinpoly.cache = {}
     return mask

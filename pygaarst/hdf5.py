@@ -185,7 +185,7 @@ class VIIRSHDF5(HDF5):
     @property
     def ascending_node(self):
         """True if scene is acquired on an ascending node, otherwise False."""
-        middlelatdelta = self.lats[-100, 3200] - self.lats[100, 3200]
+        middlelatdelta = self.lats[-100, 3199] - self.lats[100, 3199]
         if abs(middlelatdelta) > 500:
             LOGGER.warning(
             "Property 'ascending_node' of {} cannot be easily established. Please assign it manually.".format(
