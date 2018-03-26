@@ -11,7 +11,6 @@ __all__ = [
     "irutils",
     "landsat",
     "landsatutils",
-    "modapsclient",
     "mtlutils",
     "raster",
     "rasterhelpers",
