@@ -9,21 +9,21 @@
 
 from __future__ import division, print_function, absolute_import
 import os.path
-import numpy as np
-
 import logging
+import numpy as np
+from osgeo import gdal, osr
+import pygaarst.rasterhelpers as rh
+from pygaarst.rasterhelpers import PygaarstRasterError
+
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.geotiff')
-
-from osgeo import gdal, osr
 try:
     from pyproj import Proj
 except ImportError:
     LOGGER.warning(
         "PROJ4 is not available. " +
         "Any method requiring coordinate transform will fail.")
-import pygaarst.rasterhelpers as rh
-from pygaarst.rasterhelpers import PygaarstRasterError
+
 
 class GeoTIFF(object):
     """
@@ -47,16 +47,16 @@ class GeoTIFF(object):
         # see http://www.gdal.org/gdal_datamodel.html
         self.ulx = self._gtr[0]
         self.uly = self._gtr[3]
-        self.lrx = (self.ulx + self.ncol * self._gtr[1]
-                    + self.nrow * self._gtr[2])
-        self.lry = (self.uly + self.ncol * self._gtr[4]
-                    + self.nrow * self._gtr[5])
+        self.lrx = (self.ulx + self.ncol * self._gtr[1] +
+                    self.nrow * self._gtr[2])
+        self.lry = (self.uly + self.ncol * self._gtr[4] +
+                    self.nrow * self._gtr[5])
         if self._gtr[2] != 0 or self._gtr[4] != 0:
             LOGGER.warning(
-                "The dataset is not north-up. The geotransform is given "
-                + "by: (%s). " % ', '.join([str(item) for item in self._gtr])
-                + "Northing and easting values will not have expected meaning."
-                )
+                "The dataset is not north-up. The geotransform is given " +
+                "by: (%s). " % ', '.join([str(item) for item in self._gtr]) +
+                "Northing and easting values will not have expected meaning."
+            )
         self.dataobj = None
 
     @property
@@ -108,14 +108,13 @@ class GeoTIFF(object):
         as a numpy array: upper-left corner of upper-left pixel
         to upper-right corner of upper-right pixel (ncol+1)."""
         delta = np.abs(
-            (self.lrx-self.ulx)/self.ncol
-            - self.delx
-            )
+            (self.lrx - self.ulx) / self.ncol -
+            self.delx)
         if delta > 10e-2:
             LOGGER.warn(
-                "GeoTIFF issue: E-W grid step differs from "
-                + "deltaX by more than 1% ")
-        return np.linspace(self.ulx, self.lrx, self.ncol+1)
+                "GeoTIFF issue: E-W grid step differs from " +
+                "deltaX by more than 1% ")
+        return np.linspace(self.ulx, self.lrx, self.ncol + 1)
 
     @property
     def northing(self):
@@ -124,29 +123,28 @@ class GeoTIFF(object):
         upper-left corner of upper-left pixel (nrow+1)."""
         # check if data grid step is consistent
         delta = np.abs(
-            (self.lry-self.uly)/self.nrow
-            - self.dely
-            )
+            (self.lry - self.uly) / self.nrow -
+            self.dely)
         if delta > 10e-2:
             LOGGER.warn(
-                "GeoTIFF issue: N-S grid step differs from "
-                + "deltaY by more than 1% ")
-        return np.linspace(self.lry, self.uly, self.nrow+1)
+                "GeoTIFF issue: N-S grid step differs from " +
+                "deltaY by more than 1% ")
+        return np.linspace(self.lry, self.uly, self.nrow + 1)
 
     @property
     def x_pxcenter(self):
         """The x-coordinates of pixel centers, as a numpy array ncol."""
         return np.linspace(
-            self.ulx + self.delx/2,
-            self.lrx - self.delx/2,
+            self.ulx + self.delx / 2,
+            self.lrx - self.delx / 2,
             self.ncol)
 
     @property
     def y_pxcenter(self):
         """y-coordinates of pixel centers, nrow."""
         return np.linspace(
-            self.lry - self.dely/2,
-            self.uly + self.dely/2,
+            self.lry - self.dely / 2,
+            self.uly + self.dely / 2,
             self.nrow)
 
     @property
@@ -209,8 +207,8 @@ class GeoTIFF(object):
             x (float): scalar or array of easting coordinates
             y (float): scalar or array of northing coordinates
         """
-        if (rh._test_outside(i, 0, self.nrow)
-                or rh._test_outside(j, 0, self.ncol)):
+        if (rh._test_outside(i, 0, self.nrow) or
+                rh._test_outside(j, 0, self.ncol)):
             raise PygaarstRasterError(
                 "Coordinates %d, %d out of bounds" % (i, j))
         x = self.easting[0] + j * self.delx
@@ -236,14 +234,13 @@ class GeoTIFF(object):
         if (rh._test_outside(x, self.easting[0], self.easting[-1]) or
                 rh._test_outside(y, self.northing[0], self.northing[-1])):
             raise PygaarstRasterError("Coordinates out of bounds")
-        i = (1 - (y  - self.northing[0]) /
+        i = (1 - (y - self.northing[0]) /
              (self.northing[-1] - self.northing[0])) * self.nrow
         j = ((x - self.easting[0]) /
              (self.easting[-1] - self.easting[0])) * self.ncol
         if precise:
             return i, j
-        else:
-            return int(np.floor(i)), int(np.floor(j))
+        return int(np.floor(i)), int(np.floor(j))
 
     def simpleplot(self):
         """Quick and dirty plot of each band (channel, dataset) in the image.
@@ -293,10 +290,10 @@ class GeoTIFF(object):
                     "%s is not a valid directory to save file to " % dirname)
         if os.path.isdir(newpath):
             LOGGER.warning(
-                "%s is a directory." % dirname + " Choose a name "
-                + "that is suitable for writing a dataset to.")
-        if (newdata.shape != self.data.shape
-                and newdata.shape != self.data[0, ...].shape):
+                "%s is a directory." % dirname + " Choose a name " +
+                "that is suitable for writing a dataset to.")
+        if (newdata.shape != self.data.shape and
+                newdata.shape != self.data[0, ...].shape):
             raise PygaarstRasterError(
                 "New and cloned GeoTIFF dataset must be the same shape.")
         dims = newdata.ndim
@@ -314,8 +311,8 @@ class GeoTIFF(object):
             gdaltype = NPDTYPE2GDALTYPECODE[newdata.dtype.name]
         except KeyError as err:
             raise PygaarstRasterError(
-                "Data type in array %s " % newdata.dtype.name
-                + "cannot be converted to GDAL data type: \n%s" % err.message)
+                "Data type in array %s " % newdata.dtype.name +
+                "cannot be converted to GDAL data type: \n%s" % err.message)
         proj = self.projection
         geotrans = self._gtr
         gtiffdr = gdal.GetDriverByName('GTiff')
@@ -326,6 +323,6 @@ class GeoTIFF(object):
             gtiff.GetRasterBand(1).WriteArray(newdata)
         else:
             for idx in range(dims):
-                gtiff.GetRasterBand(idx+1).WriteArray(newdata[idx, :, :])
+                gtiff.GetRasterBand(idx + 1).WriteArray(newdata[idx, :, :])
         gtiff = None
         return GeoTIFF(newpath)

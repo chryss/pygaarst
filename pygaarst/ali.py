@@ -9,14 +9,15 @@
 
 from __future__ import division, print_function, absolute_import
 import os.path
+import logging
 
 import pygaarst.irutils as ir
 from pygaarst.rasterhelpers import PygaarstRasterError
 from pygaarst.usgsl1 import USGSL1scene, USGSL1band, _validate_platformorigin
 
-import logging
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.ali')
+
 
 class ALIscene(USGSL1scene):
     """
@@ -63,8 +64,8 @@ class ALIscene(USGSL1scene):
             bandpath = os.path.join(self.dirname, postprocessfn)
             self.bands[band] = ALIband(bandpath, band=band, scene=self)
             return self.bands[band]
-        else:
-            return object.__getattribute__(self, bandname)
+        return object.__getattribute__(self, bandname)
+
 
 class ALIband(USGSL1band):
     """

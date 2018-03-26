@@ -9,19 +9,20 @@ Created by Chris Waigl on 2013-09-21.
 
 from __future__ import division, print_function, absolute_import
 
+import logging
 import numpy as np
 from mpl_toolkits.basemap import Basemap
 
-import logging
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.basemaputils')
 
+
 def map_interiorAK(
-    width=1800000,
-    height=1200000,
-    water='lightskyblue',
-    earth='snow',
-    resolution='i'):
+        width=1800000,
+        height=1200000,
+        water='lightskyblue',
+        earth='snow',
+        resolution='i'):
     """
     Albers Equal Area map of interior Alaska, with some overridable presets.
     """
@@ -42,6 +43,7 @@ def map_interiorAK(
         np.arange(0, 80, 5), labels=[1, 1, False, False])
     bmap.drawmapboundary(fill_color=water)
     return bmap
+
 
 def maptransform(mmap, record):
     """Given a Basemap object and a Fiona collection record in geographic
