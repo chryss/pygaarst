@@ -58,51 +58,6 @@ Documentation is also still in the very early stages of development.
 
 The following modules are available and fulfil useful functions at the current time:
 
-pygaarst.modapsclient
----------------------
-
-This is a REST-full web service client that implements the NASA LAADSWEB data API (http://ladsweb.nascom.nasa.gov/data/api.html)
-
-`class ModapsClient(object)`
-
-Usage:
-
-```python
-from pygaarst import modapsclient as m
-a = m.ModapsClient()
-retvar = a.[methodname](args)
-```
-
-Implements the methods from http://ladsweb.nascom.nasa.gov/data/api.html , except for (currently) those related to OpenSearch (which don't appear to be working reliably server-side) and ordering (TBD). Implemented methods are marked with an x. 
-
-* x `getAllOrders`  
-* x `getBands`  
-* x `getBrowse`  
-* x `getCollections`  
-* x `getDataLayers`  
-* x `getDateCoverage`  
-* x `getFileOnlineStatuses`  
-* x `getFileProperties`  
-* x `getFileUrls`  
-* x `getMaxSearchResults`  
-* `getOpenSearch`  
-* `getOrderStatus`  
-* `getOrderUrl`  
-* `getOSDD`  
-* x `getPostProcessingTypes`  
-* x `listCollections` (deprecated)  
-* x `listMapProjections`  
-* x `listProductGroups`  
-* x `listProducts`  
-* x `listProductsByInstrument`  
-* x `listReprojectionParameters`  
-* x `listSatelliteInstruments`  
-* `orderFiles`  
-* `orderFilesProcessed` (deprecated)  
-* `releaseOrder`  
-* `searchDatasets`  
-* x `searchForFiles`  
-* x `searchForFilesByName`  
 
 pygaarst.raster
 ---------------
