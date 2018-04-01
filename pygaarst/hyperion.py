@@ -9,19 +9,21 @@
 
 from __future__ import division, print_function, absolute_import
 import datetime as dt
-import os.path
+import os
 import itertools
 import numpy as np
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
-LOGGER = logging.getLogger('pygaarst.hyperion')
 
 import pygaarst.hyperionutils as hyp
 import pygaarst.landsatutils as lu
 import pygaarst.rasterhelpers as rh
 from pygaarst.rasterhelpers import PygaarstRasterError
 from pygaarst.usgsl1 import USGSL1scene, USGSL1band, _validate_platformorigin
+
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger('pygaarst.hyperion')
+
 
 class Hyperionscene(USGSL1scene):
     """
@@ -67,8 +69,8 @@ class Hyperionscene(USGSL1scene):
                             'Hyperion band %s is not calibrated.' % band)
                 else:
                     raise PygaarstRasterError(
-                        "EO-1 Hyperion does not have a band %s. "  % band
-                        + "Permissible band labels are between 1 and 242.")
+                        "EO-1 Hyperion does not have a band %s. " % band +
+                        "Permissible band labels are between 1 and 242.")
         except ValueError:
             pass
         if isband:
@@ -115,8 +117,8 @@ class Hyperionscene(USGSL1scene):
             bnd = self.hyperionbands[:7]
         else:
             raise PygaarstRasterError(
-                "Unrecognized argument %s for bands " % bands
-                + "in raser.HyperionScene.")
+                "Unrecognized argument %s for bands " % bands +
+                "in raser.HyperionScene.")
         for band in bnd:
             rad = self.__getattr__(band).radiance
             rads.append(rad[i_idx, j_idx])
@@ -164,6 +166,7 @@ class Hyperionscene(USGSL1scene):
             scenecube.fh.close()
         return scenecube
 
+
 class Hyperionband(USGSL1band):
     """
     Represents a band of an EO-1 Hyperion scene.
@@ -178,14 +181,16 @@ class Hyperionband(USGSL1band):
         metadata, as numpy array"""
         if not self.meta:
             raise PygaarstRasterError(
-                "Impossible to retrieve metadata "
-                + "for band. No radiance calculation possible.")
+                "Impossible to retrieve metadata " +
+                "for band. No radiance calculation possible.")
         if int(self.band) <= 70:
-            rad = self.data / self.meta['RADIANCE_SCALING']['SCALING_FACTOR_VNIR']
+            rad = self.data / self.meta[
+                'RADIANCE_SCALING']['SCALING_FACTOR_VNIR']
         else:
-            rad = self.data / self.meta['RADIANCE_SCALING']['SCALING_FACTOR_SWIR']
+            rad = self.data / self.meta[
+                'RADIANCE_SCALING']['SCALING_FACTOR_SWIR']
         return rad.astype('float32')
-        
+
     @property
     def reflectance(self):
         """
@@ -193,8 +198,8 @@ class Hyperionband(USGSL1band):
         """
         if not self.meta:
             raise PygaarstRasterError(
-                "Impossible to retrieve metadata for band. "
-                + "No reflectance calculation possible.")
+                "Impossible to retrieve metadata for band. " +
+                "No reflectance calculation possible.")
         elif self.sensor == 'HYPERION':
             dac = dt.datetime.strptime(
                 self.meta['PRODUCT_METADATA']['START_TIME'],
@@ -204,8 +209,10 @@ class Hyperionband(USGSL1band):
             d = lu.getd(juliandac)
             esun = hyp.getesun(self.band)
             rad = self.radiance
-            return (np.pi * d * d * rad)/(esun * np.sin(sedeg*np.pi/180))
+            return (
+                (np.pi * d * d * rad) /
+                (esun * np.sin(sedeg * np.pi / 180)))
         else:
             raise PygaarstRasterError(
                 "Unkown sensor {} on spacecraft {}.".format(
-                self.sensor, self.spacecraft))
+                    self.sensor, self.spacecraft))
