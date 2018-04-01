@@ -67,8 +67,8 @@ class Hyperionscene(USGSL1scene):
                             'Hyperion band %s is not calibrated.' % band)
                 else:
                     raise PygaarstRasterError(
-                        "EO-1 Hyperion does not have a band %s. " % band +
-                        "Permissible band labels are between 1 and 242.")
+                        "EO-1 Hyperion does not have a band %s. "  % band
+                        + "Permissible band labels are between 1 and 242.")
         except ValueError:
             pass
         if isband:

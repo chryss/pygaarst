@@ -20,13 +20,12 @@ def gethyperionbands():
     this_dir, this_filename = os.path.split(__file__)
     tabfile = os.path.join(this_dir, 'data', 'Hyperion_Spectral_coverage.tab')
     #print(tabfile)
-    converter = lambda x: x.decode('utf-8').replace('B', 'band')
+    converter = lambda x: x.replace('B', 'band')
     return np.recfromtxt(
         tabfile,
         delimiter='\t',
         skip_header=1,
         names=True,
-        encoding='bytes',
         converters={0: converter}
         )
 
