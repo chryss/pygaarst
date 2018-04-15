@@ -12,6 +12,7 @@ Created by Chris Waigl on 2013-10-28.
 
 from __future__ import division, print_function, absolute_import
 
+from builtins import object
 from osgeo import gdal, ogr
 from osgeo import osr
 from pyproj import Proj

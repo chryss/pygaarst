@@ -10,6 +10,7 @@ Created by Chris Waigl on 2014-04-30.
 
 from __future__ import division, print_function, absolute_import
 
+from builtins import object
 import numpy as np
 import logging
 logging.basicConfig(level=logging.DEBUG)

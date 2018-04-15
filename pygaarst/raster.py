@@ -22,10 +22,10 @@
 """
 
 from __future__ import division, print_function, absolute_import
-
+from builtins import object
 import logging
 # from netCDF4 import Dataset as netCDF
- 
+
 from pygaarst.geotiff import GeoTIFF
 from pygaarst.usgsl1 import USGSL1scene, USGSL1band
 from pygaarst.landsat import Landsatscene, Landsatband
@@ -37,7 +37,8 @@ from pygaarst.hdf4 import HDF4, MODSWHDF4
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.raster')
 
-### to be refactored
+# to be refactored
+
 
 class NetCDF(object):
     """Implements NetCDF data format"""

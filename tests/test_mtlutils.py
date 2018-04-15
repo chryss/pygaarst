@@ -12,7 +12,7 @@ import pytest
 from pygaarst import mtlutils as mtl
 
 DATADIR = "tests/data"
-MODL2meta = """
+MODL2meta = u"""
 
 GROUP                  = INVENTORYMETADATA
   GROUPTYPE            = MASTERGROUP

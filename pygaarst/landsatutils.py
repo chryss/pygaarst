@@ -32,7 +32,7 @@ def get_bands(spacecraftid):
     except KeyError:
         logging.error(
             "Band labels are available for TM, ETM+ "
-            + "and OLI/TIR sensors on %s." % ', '.join(LANDSATBANDS.keys()))
+            + "and OLI/TIR sensors on %s." % ', '.join(list(LANDSATBANDS.keys())))
 
 def lskeyselect(isnew, keystr):
     """

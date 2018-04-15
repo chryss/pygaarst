@@ -13,13 +13,19 @@ also used by Hyperion and ALI.
 
 from __future__ import division, print_function, absolute_import
 
-import os.path, glob
+from future import standard_library
+standard_library.install_aliases()
+
+import os
+import glob
 import datetime
 import re
-from StringIO import StringIO
+from io import StringIO
 from ast import literal_eval
 from collections import OrderedDict
 import logging
+
+
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger('pygaarst.mtlutils')
 
@@ -76,12 +82,14 @@ STATUSCODE = [
     "add metadata item",
     "leave metadata group",
     "end"
-    ]
+]
+
 
 # A custom exception for this module
 class MTLParseError(Exception):
     """Custom exception: parse errors in Landsat or EO-1 MTL metadata files"""
     pass
+
 
 def _deep_convert_dict(layer):
     """Helper function to convert dictionary back from OrderedDict"""
@@ -89,21 +97,24 @@ def _deep_convert_dict(layer):
     if isinstance(layer, OrderedDict):
         to_ret = dict(layer)
     try:
-        for key, value in to_ret.items():
+        for key, value in list(to_ret.items()):
             to_ret[key] = _deep_convert_dict(value)
     except AttributeError:
         pass
     return to_ret
+
 
 def _sanitizeline(line):
     for pattern, repl in SANITIZEPAT:
         line = re.sub(pattern, repl, line)
     return line
 
+
 # Help functions to identify the current line and extract information
 def _islinetype(line, testchar):
     """Checks for various kinds of line types based on line head"""
     return line.strip().startswith(testchar)
+
 
 def _isassignment(line):
     """Checks if the line is a key-value assignment"""
@@ -226,8 +237,8 @@ def _checkstatus(status, line):
         return newstatus
     elif status != 4:
         raise MTLParseError(
-            "Cannot parse the following line after status "
-            + "'%s':\n%s" % (STATUSCODE[status], line))
+            "Cannot parse the following line after status " +
+            "'%s':\n%s" % (STATUSCODE[status], line))
 
 
 def _transstat(status, grouppath, dictpath, line):
@@ -292,7 +303,7 @@ def _transstat(status, grouppath, dictpath, line):
             currentobj = None
     return grouppath, dictpath
 
-# Identifying data type of a metadata item and
+
 def _postprocess(valuestr):
     """
     Takes value as str, returns str, int, float, date, datetime, or time
@@ -373,8 +384,8 @@ def parsemeta(metadataloc):
             else:
                 metadatastr = metalist[0]
             logging.warning(
-                "More than one file in directory match metadata "
-                + "file pattern. Using %s." % metadatastr)
+                "More than one file in directory match metadata " +
+                "file pattern. Using %s." % metadatastr)
     else:
         metadatastr = metadataloc
 
@@ -389,9 +400,10 @@ def parsemeta(metadataloc):
             inpstream = StringIO(metadatastr)
         except:
             raise MTLParseError(
-            "%s does not appear to be a file-like object " % metadatastr)
+                "%s does not appear to be a file-like object " % metadatastr)
         metadata = _parsemetastream(inpstream)
     return _deep_convert_dict(metadata)
+
 
 def _parsemetastream(filehandle):
     status = 0
@@ -406,9 +418,9 @@ def _parsemetastream(filehandle):
             # we reached the end in the previous iteration,
             # but are still reading lines
             logging.warning(
-                "Metadata file %s appears to " % filehandle
-                + "have extra lines after the end of the metadata. "
-                + "This is probably, but not necessarily, harmless.")
+                "Metadata file %s appears to " % filehandle +
+                "have extra lines after the end of the metadata. " +
+                "This is probably, but not necessarily, harmless.")
         status = _checkstatus(status, line)
         grouppath, dictpath = _transstat(status, grouppath, dictpath, line)
     return metadata

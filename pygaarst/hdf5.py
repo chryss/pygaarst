@@ -8,6 +8,10 @@
 """
 
 from __future__ import division, print_function, absolute_import
+from builtins import zip
+from builtins import str
+from builtins import filter
+from builtins import object
 import os.path
 import re
 import glob
@@ -131,16 +135,16 @@ class VIIRSHDF5(HDF5):
                 self.meta = _handlenode(node, self.meta)
         # ... and then from the HDF5 dataobject attributes:
         for key in self.dataobj.attrs:
-            self.meta[key] = unicode(self.dataobj.attrs[key][0][0])
-        self.bandnames = self.dataobj['All_Data'].keys()
+            self.meta[key] = str(self.dataobj.attrs[key][0][0])
+        self.bandnames = list(self.dataobj['All_Data'].keys())
         self.bandlabels = {_getlabel(nm): nm for nm in self.bandnames}
         self.bands = {}
-        self.bandname = self.dataobj['All_Data'].keys()[0]
+        self.bandname = list(self.dataobj['All_Data'].keys())[0]
         try:
             self.longbandname = self.meta[u'Data_Product']['N_Collection_Short_Name'] + u'_All'
         except TypeError:
             pass
-        self.datasets = self.dataobj['All_Data/'+self.bandname].items()
+        self.datasets = list(self.dataobj['All_Data/'+self.bandname].items())
         if geofilepath:
             self.geofilepath = geofilepath
         else:
@@ -170,7 +174,7 @@ class VIIRSHDF5(HDF5):
                     "Unable to open georeference file {}: {}".format(
                         self.geofilepath, err)
                 )
-            self.geogroupkey = geodat['All_Data'].keys()[0]
+            self.geogroupkey = list(geodat['All_Data'].keys())[0]
             return geodat['All_Data/%s' % self.geogroupkey]
         elif self.GEO:
             # It could be an aggregated multi-band VIIRS file
@@ -246,9 +250,9 @@ def getVIIRSfilesbygranule(basedir, scenelist=[]):
     """
     regex = re.compile(r"(?P<ftype>[A-Z0-9]{5})_[a-z]+_d(?P<date>\d{8})_t(?P<time>\d{7})_e\d+_b(\d+)_c\d+_\w+.h5")
     if scenelist:
-        subdirs = filter(
+        subdirs = list(filter(
             os.path.isdir,
-            [os.path.join(basedir, item) for item in scenelist])
+            [os.path.join(basedir, item) for item in scenelist]))
     else:
         subdirs = sorted(glob.glob(
                 basedir +

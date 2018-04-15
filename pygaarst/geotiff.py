@@ -8,6 +8,9 @@
 """
 
 from __future__ import division, print_function, absolute_import
+from builtins import str
+from builtins import range
+from builtins import object
 import os.path
 import logging
 import numpy as np
@@ -37,7 +40,7 @@ class GeoTIFF(object):
         try:
             self.dataobj = gdal.Open(filepath)
         except RuntimeError as err:
-            LOGGER.error("Could not open %s: %s" % (filepath, err.message))
+            LOGGER.error("Could not open %s: %s" % (filepath, str(err)))
             raise
         self.filepath = filepath
         self.ncol = self.dataobj.RasterXSize

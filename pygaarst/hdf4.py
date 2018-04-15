@@ -8,6 +8,7 @@
 """
 
 from __future__ import division, print_function, absolute_import
+from builtins import object
 import os.path
 import re
 
@@ -66,7 +67,7 @@ class MODSWHDF4(HDF4):
     """
     def __init__(self, filepath, geofilepath=None, variable=None):
         super(MODSWHDF4, self).__init__(filepath)
-        self.datasets = self.dataobj.datasets().keys()
+        self.datasets = list(self.dataobj.datasets().keys())
         self.bandnames = None
         self.coremeta = mtl.parsemeta(self.rawmetadata['CoreMetadata.0'])
         self.archivemeta = mtl.parsemeta(self.rawmetadata['ArchiveMetadata.0'])

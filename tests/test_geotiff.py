@@ -7,6 +7,7 @@ Created by Chris Waigl on 2013-09-18.
 """
 
 from __future__ import division, print_function, absolute_import
+from builtins import str
 import os
 import numpy as np
 import pytest
@@ -15,6 +16,7 @@ from pygaarst.rasterhelpers import PygaarstRasterError
 
 DATADIR = "tests/data"
 rgbgeotiff = os.path.join(DATADIR, 'LC8_754_8bit.tiff')
+basicgeotiff = os.path.join(DATADIR, 'bogota_crop.tif')
 
 
 def test_valid_geotiff_open():
@@ -24,6 +26,12 @@ def test_valid_geotiff_open():
 
 
 def test_basic_geotiff_properties():
+    a = geotiff.GeoTIFF(basicgeotiff)
+    assert type(a) == geotiff.GeoTIFF
+    assert a.delx == 60.0
+
+
+def test_rgb_geotiff_properties():
     a = geotiff.GeoTIFF(rgbgeotiff)
     assert a.lrx == 501105.0
     assert a.coordtrans.srs == u'+proj=utm +zone=6 +datum=WGS84 +units=m +no_defs '

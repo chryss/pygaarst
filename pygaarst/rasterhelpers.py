@@ -9,6 +9,7 @@ Copyright (c) 2014 Christine F. Waigl.
 """
 
 from __future__ import division, print_function, absolute_import
+from builtins import object
 import numpy as np
 
 import logging

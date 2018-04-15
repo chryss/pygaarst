@@ -8,6 +8,8 @@
 """
 
 from __future__ import division, print_function, absolute_import
+from builtins import str
+from builtins import range
 import datetime as dt
 import os
 import itertools
@@ -43,7 +45,7 @@ class Hyperionscene(USGSL1scene):
             self.band_is_calibrated]
         self.permissiblebandid = [str(num) for num in range(1, 243)]
         self.calibratedbandid = [
-            str(num) for num in itertools.chain(range(8, 58), range(77, 225))]
+            str(num) for num in itertools.chain(list(range(8, 58)), list(range(77, 225)))]
         _validate_platformorigin('HYPERION', self.spacecraft, self.sensor)
 
     def __getattr__(self, bandname):
