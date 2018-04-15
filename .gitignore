@@ -3,6 +3,9 @@
 # C extensions
 *.so
 
+# futurize
+*.py.bak
+
 # Packages
 *.egg
 *.egg-info
