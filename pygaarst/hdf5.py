@@ -145,7 +145,14 @@ class VIIRSHDF5(HDF5):
             self.geofilepath = geofilepath
         else:
             try:
-                geofn = self.dataobj.attrs['N_GEO_Ref'][0][0]
+                if not np.shape(self.dataobj.attrs['N_GEO_Ref']):
+                    geofn = self.dataobj.attrs['N_GEO_Ref']
+                elif (len(np.shape(self.dataobj.attrs['N_GEO_Ref'])) == 1):
+                    geofn = self.dataobj.attrs['N_GEO_Ref'][0]
+                elif (len(np.shape(self.dataobj.attrs['N_GEO_Ref'])) == 2):
+                    geofn = self.dataobj.attrs['N_GEO_Ref'][0][0]
+                else:
+                    geofn = None
                 self.geofilepath = os.path.join(self.dirname, geofn)
             except KeyError:
                 self.geofilepath = None
