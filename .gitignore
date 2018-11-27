@@ -31,6 +31,9 @@ pip-log.txt
 .pytest_cache/*
 nosetests.xml
 
+# futureize
+*.bak
+
 # Translations
 *.mo
 

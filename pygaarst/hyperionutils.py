@@ -7,7 +7,7 @@ Utility functions for processing Hyperion datasets
 Created by Chris Waigl on 2014-04-25.
 """
 
-from __future__ import division, print_function, absolute_import
+from __future__ import division, print_function
 import os
 import numpy as np
 
@@ -19,7 +19,7 @@ def gethyperionbands():
     """
     def converter(bandname):
         return bandname.decode('utf-8').replace('B', 'band')
-    this_dir, this_filename = os.path.split(__file__)
+    this_dir, _ = os.path.split(__file__)
     tabfile = os.path.join(this_dir, 'data', 'Hyperion_Spectral_coverage.tab')
     return np.recfromtxt(
         tabfile,
@@ -32,9 +32,10 @@ def gethyperionbands():
 
 
 def gethyperionirradiance():
+    """Load Hyperion spectral irradiance into Numpy array"""
     def converter(bandname):
         return bandname.decode('utf-8').replace('b', 'band')
-    this_dir, this_filename = os.path.split(__file__)
+    this_dir, _ = os.path.split(__file__)
     tabfile = os.path.join(
         this_dir, 'data', 'Hyperion_Spectral_Irradiance.txt')
     return np.recfromtxt(
