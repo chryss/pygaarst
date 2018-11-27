@@ -7,7 +7,8 @@ Utility functions for processing Hyperion datasets
 Created by Chris Waigl on 2014-04-25.
 """
 
-from __future__ import division, print_function, absolute_import
+from __future__ import division, print_function
+from distutils.version import LooseVersion
 import os
 import numpy as np
 
@@ -17,21 +18,25 @@ def gethyperionbands():
     Load Hyperion spectral band values into Numpy structured array.
     Source: http://eo1.usgs.gov/sensors/hyperioncoverage
     """
-    this_dir, this_filename = os.path.split(__file__)
+    this_dir, _ = os.path.split(__file__)
     tabfile = os.path.join(this_dir, 'data', 'Hyperion_Spectral_coverage.tab')
-    converter = lambda x: x.decode('utf-8').replace('B', 'band')
-    return np.recfromtxt(
-        tabfile,
-        delimiter='\t',
-        skip_header=1,
-        names=True,
-        encoding='bytes',
-        converters={0: converter}
-    )
+    kwargs = {
+        'delimiter': '\t',
+        'skip_header': 1,
+        'names': True,
+    }
+    if LooseVersion(np.__version__) > LooseVersion('1.14'):
+        kwargs['encoding'] = 'bytes'
+        converter = lambda x: x.decode('utf-8').replace('B', 'band')
+    else:
+        converter = lambda x: x.replace('B', 'band')
+    kwargs['converters'] = {0: converter}
+    return np.recfromtxt(tabfile, **kwargs)
 
 
 def gethyperionirradiance():
-    this_dir, this_filename = os.path.split(__file__)
+    """Load Hyperion spectral irradiance into Numpy array"""
+    this_dir, _ = os.path.split(__file__)
     tabfile = os.path.join(
         this_dir, 'data', 'Hyperion_Spectral_Irradiance.txt')
     converter = lambda x: x.replace('b', '')

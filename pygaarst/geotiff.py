@@ -37,7 +37,7 @@ class GeoTIFF(object):
         try:
             self.dataobj = gdal.Open(filepath)
         except RuntimeError as err:
-            LOGGER.error("Could not open %s: %s" % (filepath, err.message))
+            LOGGER.error("Could not open %s: %s" % (filepath, str(err))
             raise
         self.filepath = filepath
         self.ncol = self.dataobj.RasterXSize
