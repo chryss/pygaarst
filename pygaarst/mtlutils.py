@@ -11,7 +11,7 @@ Created by Chris Waigl on 2014-04-20.
 also used by Hyperion and ALI.
 """
 
-from __future__ import division, print_function, absolute_import
+from __future__ import division, print_function
 
 from future import standard_library
 standard_library.install_aliases()
@@ -266,7 +266,7 @@ def _transstat(status, grouppath, dictpath, line):
                 if currentparent[0] == "ADDITIONALATTRIBUTENAME":
                     currentdict[_postprocess(newval)] = None
                 elif currentparent[0] == "PARAMETERVALUE":
-                    curkey, curval = currentdict.popitem()
+                    curkey, _ = currentdict.popitem()
                     currentdict[curkey] = _postprocess(newval)
                 else:
                     currentdict[currentparent[0]] = _postprocess(newval)
@@ -349,7 +349,7 @@ def _postprocess(valuestr):
             pass
     if valuestr.startswith('"') and valuestr.endswith('"'):
         # it's a string
-            return valuestr[1:-1]
+        return valuestr[1:-1]
 
     # If we get here, we still haven't returned anything.
     logging.info(
@@ -391,7 +391,7 @@ def parsemeta(metadataloc):
 
     # Reading file line by line and inserting data into metadata dictionary
     try:
-        with open(metadatastr, 'rU') as filehandle:
+        with open(metadatastr, 'r') as filehandle:
             metadata = _parsemetastream(filehandle)
     except IOError:
         # maybe the argument is a string. Converting to a file-like object
