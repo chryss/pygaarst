@@ -97,7 +97,7 @@ def _handlenode(node, outdict):
             outdict[node.nodeName] = newdict
         except AttributeError:
             outdict[node.nodeName] = [outdict[node.nodeName]]
-            outdict[node.nodeName].append(newdict)            
+            outdict[node.nodeName].append(newdict)
 #        print(newdict)
     return outdict
 
@@ -199,8 +199,9 @@ class VIIRSHDF5(HDF5):
         middlelatdelta = self.lats[-100, 3199] - self.lats[100, 3199]
         if abs(middlelatdelta) > 500:
             LOGGER.warning(
-            "Property 'ascending_node' of {} cannot be easily established. Please assign it manually.".format(
-                repr(self)))
+                "Property 'ascending_node' of {} cannot be easily established. "
+                "Please assign it manually.".format(
+                    repr(self)))
             return None
         if middlelatdelta < 0:
             return False
