@@ -16,5 +16,5 @@ SHP1 = os.path.join(DATADIR, 'shptest.shp')
 
 def test_Shp():
     a = vector.Shapefile(SHP1)
-    assert a.proj4 == '+proj=longlat +datum=WGS84 +no_defs '
+    assert a.proj4 == '+proj=longlat +ellps=WGS84 +no_defs'
     assert a.layer.GetGeomType() == 3
